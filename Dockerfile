@@ -21,6 +21,8 @@ RUN apt-get update && \
 # 프로젝트 파일 복사
 COPY . .
 
+ENV DJANGO_ENV=production
+
 # 포트 8000 열기
 EXPOSE 8000
 
