@@ -10,7 +10,13 @@ ENV PYTHONUNBUFFERED 1
 
 # 의존성 파일 복사 및 설치
 COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+#패키지 목록 업데이트 및 git 설치
+RUN apt-get update && \
+    apt-get install -y git && \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 프로젝트 파일 복사
 COPY . .

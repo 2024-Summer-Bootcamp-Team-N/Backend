@@ -1,4 +1,6 @@
 from django.http import HttpResponse
+from django.shortcuts import render
+
 topics = [
     {'id':1, 'title': '수하', 'body':'Routing is ..'},
     {'id':2, 'title': '민기', 'body':'Views are ..'},
@@ -9,22 +11,7 @@ topics = [
     {'id':7, 'title': '재준', 'body':'Variables are ..'},
 ]
 def index(request):
-    global topics
-    ol = ''
-    for topic in topics:
-        ol += f'<li><a href="/read/{topic["id"]}">{topic["title"]}</a></li>'
-    return HttpResponse(f'''
-    <html>
-    <body>
-        <h1>Team-N 여러분, 서버에 오신것을 환영합니다!!!</h1>
-        <ol>
-            {ol}
-        <ol>
-        <h1>우리팀 주제는?</h1>
-        화이팅합시다...
-    <body>
-    <html>
-    ''')
+    return render(request, 'index.html', {'topics': topics})
 
 def create(request):
     return HttpResponse("created!!!")

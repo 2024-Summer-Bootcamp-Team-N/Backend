@@ -8,5 +8,5 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=1  # 개발 환경 설정
+      - PYTHONUNBUFFERED=1  # 개발 환경 설정
 
