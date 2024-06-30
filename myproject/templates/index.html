@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Team-N Server</title>
+    <script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=n3lwh5w0mj"></script>
+    <script type="text/javascript">
+        function initMap() {
+            var mapOptions = {
+                center: new naver.maps.LatLng(37.5665, 126.9780),
+                zoom: 10
+            };
+            var map = new naver.maps.Map('map', mapOptions);
+        }
+        window.onload = initMap;
+    </script>
+</head>
+<body>
+    <h1>Team-N 여러분, 서버에 오신것을 환영합니다!!!</h1>
+    <ol>
+        {% for topic in topics %}
+            <li><a href="/read/{{ topic.id }}">{{ topic.title }}</a></li>
+        {% endfor %}
+    </ol>
+    <h1>우리팀 주제는?</h1>
+    <div id="map" style="width:100%;height:400px;"></div>
+    <h2>화이팅합시다...</h2>
+</body>
+</html>
