@@ -1,7 +1,5 @@
 Django>=3.2
-<<<<<<< Updated upstream
-=======
 djangorestframework
 drf-yasg
 django-environ
->>>>>>> Stashed changes
+python-dotenv
