@@ -1,3 +1,4 @@
+
 from django.http import HttpResponse
 from django.shortcuts import render
 from rest_framework import viewsets, status
@@ -21,7 +22,7 @@ topics = [
 def index(request):
     context = {
         'topics': topics,
-        'naver_map_api_key': os.getenv('NAVER_MAP_API_KEY')
+        'kakaoMapApiKey': os.getenv('KAKAO_MAP_API_KEY')
     }
     return render(request, 'index.html', context)
 
