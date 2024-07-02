@@ -5,16 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Team-N Server</title>
     <script type="text/javascript">
-        var naverMapApiKey = '{{ naver_map_api_key }}';
-        document.write('<script type="text/javascript" src="https://openapi.map.naver.com/openapi/v3/maps.js?ncpClientId=' + naverMapApiKey + '"><\/script>');
+        var kakaoMapApiKey = '{{ kakaoMapApiKey }}';
+        document.write('<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=' + kakaoMapApiKey + '"><\/script>');
     </script>
     <script type="text/javascript">
         function initMap() {
-            var mapOptions = {
-                center: new naver.maps.LatLng(37.5665, 126.9780),
-                zoom: 10
+            var container = document.getElementById('map');
+            var options = {
+                center: new kakao.maps.LatLng(37.5665, 126.9780),
+                level: 3
             };
-            var map = new naver.maps.Map('map', mapOptions);
+            var map = new kakao.maps.Map(container, options);
         }
         window.onload = initMap;
     </script>
@@ -31,4 +32,3 @@
     <h2>화이팅합시다...</h2>
 </body>
 </html>
-
