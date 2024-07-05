@@ -5,7 +5,7 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-# Update package lists and install git separately
+# Update package lists, install git, and install MySQL client
 RUN apt-get update \
     && apt-get install -y git \
     && apt-get clean \
