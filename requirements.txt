@@ -3,3 +3,7 @@ djangorestframework
 drf-yasg
 django-environ
 python-dotenv
+coreapi
+beautifulsoup4
+pandas
+selenium
