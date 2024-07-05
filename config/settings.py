@@ -31,8 +31,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
+    'requests',
     'drf_yasg',
-    'myapp',
+    #'apps.users',
+    'apps.entry',
+    #'apps.info',
+    #'apps.options',
 ]
 
 MIDDLEWARE = [
@@ -45,12 +49,18 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'myproject.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'myproject', 'templates')],
+        'DIRS': [
+            os.path.join(BASE_DIR, 'templates'),  # 공통 템플릿 디렉토리
+            os.path.join(BASE_DIR, 'apps/users/templates'),
+            os.path.join(BASE_DIR, 'apps/entry/templates'),
+            os.path.join(BASE_DIR, 'apps/info/templates'),
+            os.path.join(BASE_DIR, 'apps/options/templates'),
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -63,7 +73,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'myproject.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
