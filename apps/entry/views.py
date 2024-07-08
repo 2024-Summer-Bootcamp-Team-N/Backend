@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, AptSerializer, HouseSerializer, OnetwoSerializer, OfficetelSerializer
+from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, OptionsSerializer
 import re
 
 def parse_number(value):
@@ -108,18 +108,145 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
             return Response({"message": "하나만 선택해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# class AptView(APIView):
+#     @swagger_auto_schema(
+#         manual_parameters=[
+#             openapi.Parameter('parkingNumRangeMin', openapi.IN_QUERY, description="최소 주차 대수", type=openapi.TYPE_INTEGER,
+#                               enum=[0, 1, 2], required=False),
+#             openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER,
+#                               enum=[0, 1, 2, 3, 4], required=False),
+#             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
+#         ]
+#     )
+#     def post(self, request):
+#         serializer = AptSerializer(data=request.query_params)
+#         if serializer.is_valid():
+#             validated_data = serializer.validated_data
+#             messages = []
+#
+#             if validated_data.get('parkingNumRangeMin') is not None:
+#                 parking_choices = {0: "0개", 1: "1대 이상", 2: "2대 이상"}
+#                 messages.append(f"가능한 주차 대수는 {parking_choices[validated_data.get('parkingNumRangeMin')]}입니다.")
+#
+#             if validated_data.get('roomCount') is not None:
+#                 room_choices = {0: "0개", 1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+#                 messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+#
+#             if validated_data.get('isShortLease'):
+#                 messages.append("단기임대 매물만 보여드립니다.")
+#
+#             if messages:
+#                 return Response({"messages": messages}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+#
+# class OfficetelView(APIView):
+#     @swagger_auto_schema(
+#         manual_parameters=[
+#             openapi.Parameter('parkingNumRangeMin', openapi.IN_QUERY, description="최소 주차 대수", type=openapi.TYPE_INTEGER, enum=[0, 1, 2], required=False),
+#             openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER, enum=[0, 1, 2, 3, 4], required=False),
+#             openapi.Parameter('hasElevator', openapi.IN_QUERY, description="엘리베이터 유무", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('canParking', openapi.IN_QUERY, description="주차 가능 여부", type=openapi.TYPE_BOOLEAN, required=False),
+#         ]
+#     )
+#     def post(self, request):
+#         serializer = OfficetelSerializer(data=request.query_params)
+#         if serializer.is_valid():
+#             validated_data = serializer.validated_data
+#             messages = []
+#             if validated_data.get('parkingNumRangeMin') is not None:
+#                 parking_choices = {0: "0개", 1: "1대 이상", 2: "2대 이상"}
+#                 messages.append(f"가능한 주차 대수는 {parking_choices[validated_data.get('parkingNumRangeMin')]}입니다.")
+#             if validated_data.get('roomCount') is not None:
+#                 room_choices = {0: "0개", 1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+#                 messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+#             if validated_data.get('hasElevator'):
+#                 messages.append("엘리베이터가 있는 매물만 보여드립니다.")
+#             if validated_data.get('isShortLease'):
+#                 messages.append("단기임대 매물만 보여드립니다.")
+#             if validated_data.get('canParking'):
+#                 messages.append("주차가 가능한 매물만 보여드립니다.")
+#             if messages:
+#                 return Response({"messages": messages}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+# class OneTwoView(APIView):
+#     @swagger_auto_schema(
+#         manual_parameters=[
+#             openapi.Parameter('canParking', openapi.IN_QUERY, description="주차 가능 여부", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('hasElevator', openapi.IN_QUERY, description="엘리베이터 유무", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('isDivision', openapi.IN_QUERY, description="분리형", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('isDuplex', openapi.IN_QUERY, description="복층", type=openapi.TYPE_BOOLEAN, required=False),
+#         ]
+#     )
+#     def post(self, request):
+#         serializer = OnetwoSerializer(data=request.query_params)
+#         if serializer.is_valid():
+#             validated_data = serializer.validated_data
+#             messages = []
+#             if validated_data.get('hasElevator'):
+#                 messages.append("엘리베이터가 있는 매물만 보여드립니다.")
+#             if validated_data.get('isShortLease'):
+#                 messages.append("단기임대 매물만 보여드립니다.")
+#             if validated_data.get('canParking'):
+#                 messages.append("주차가 가능한 매물만 보여드립니다.")
+#             if validated_data.get('isDivision'):
+#                 messages.append("분리형 매물만 보여드립니다.")
+#             if validated_data.get('isDuplex'):
+#                 messages.append("복층 매물만 보여드립니다.")
+#             if messages:
+#                 return Response({"messages": messages}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+#
+# class HouseView(APIView):
+#     @swagger_auto_schema(
+#         manual_parameters=[
+#             openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER,
+#                               enum=[0, 1, 2, 3, 4], required=False),
+#             openapi.Parameter('canParking', openapi.IN_QUERY, description="주차 가능 여부", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('hasElevator', openapi.IN_QUERY, description="엘리베이터 유무", type=openapi.TYPE_BOOLEAN, required=False),
+#             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
+#         ]
+#     )
+#     def post(self, request):
+#         serializer = HouseSerializer(data=request.query_params)
+#         if serializer.is_valid():
+#             validated_data = serializer.validated_data
+#             messages = []
+#             if validated_data.get('roomCount') is not None:
+#                 room_choices = {0: "0개", 1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+#                 messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+#             if validated_data.get('canParking'):
+#                 messages.append("주차가 가능한 매물만 보여드립니다.")
+#             if validated_data.get('hasElevator'):
+#                 messages.append("엘리베이터가 있는 매물만 보여드립니다.")
+#             if validated_data.get('isShortLease'):
+#                 messages.append("단기임대 매물만 보여드립니다.")
+#             if messages:
+#                 return Response({"messages": messages}, status=status.HTTP_200_OK)
+#             else:
+#                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AptView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('parkingNumRangeMin', openapi.IN_QUERY, description="최소 주차 대수", type=openapi.TYPE_INTEGER,
-                              enum=[0, 1, 2], required=False),
-            openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER,
-                              enum=[0, 1, 2, 3, 4], required=False),
+            openapi.Parameter('parkingNumRangeMin', openapi.IN_QUERY, description="최소 주차 대수", type=openapi.TYPE_INTEGER, enum=[0, 1, 2], required=False),
+            openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER, enum=[0, 1, 2, 3, 4], required=False),
             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
         ]
     )
     def post(self, request):
-        serializer = AptSerializer(data=request.query_params)
+        serializer = OptionsSerializer(data=request.query_params, option_type='apartment')
         if serializer.is_valid():
             validated_data = serializer.validated_data
             messages = []
@@ -141,7 +268,6 @@ class AptView(APIView):
                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class OfficetelView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
@@ -153,7 +279,7 @@ class OfficetelView(APIView):
         ]
     )
     def post(self, request):
-        serializer = OfficetelSerializer(data=request.query_params)
+        serializer = OptionsSerializer(data=request.query_params, option_type='officetel')
         if serializer.is_valid():
             validated_data = serializer.validated_data
             messages = []
@@ -186,7 +312,7 @@ class OneTwoView(APIView):
         ]
     )
     def post(self, request):
-        serializer = OnetwoSerializer(data=request.query_params)
+        serializer = OptionsSerializer(data=request.query_params, option_type='onetwo')
         if serializer.is_valid():
             validated_data = serializer.validated_data
             messages = []
@@ -209,72 +335,17 @@ class OneTwoView(APIView):
 class HouseView(APIView):
     @swagger_auto_schema(
         manual_parameters=[
-            openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER,
-                              enum=[0, 1, 2, 3, 4], required=False),
+            openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER, enum=[0, 1, 2, 3, 4], required=False),
             openapi.Parameter('canParking', openapi.IN_QUERY, description="주차 가능 여부", type=openapi.TYPE_BOOLEAN, required=False),
             openapi.Parameter('hasElevator', openapi.IN_QUERY, description="엘리베이터 유무", type=openapi.TYPE_BOOLEAN, required=False),
             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
         ]
     )
     def post(self, request):
-        serializer = HouseSerializer(data=request.query_params)
+        serializer = OptionsSerializer(data=request.query_params, option_type='house')
         if serializer.is_valid():
             validated_data = serializer.validated_data
             messages = []
             if validated_data.get('roomCount') is not None:
                 room_choices = {0: "0개", 1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
-                messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
-            if validated_data.get('canParking'):
-                messages.append("주차가 가능한 매물만 보여드립니다.")
-            if validated_data.get('hasElevator'):
-                messages.append("엘리베이터가 있는 매물만 보여드립니다.")
-            if validated_data.get('isShortLease'):
-                messages.append("단기임대 매물만 보여드립니다.")
-            if messages:
-                return Response({"messages": messages}, status=status.HTTP_200_OK)
-            else:
-                return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-# class OptionView(APIView):
-#     @swagger_auto_schema(
-#         manual_parameters=[
-#             openapi.Parameter('canParking', openapi.IN_QUERY, description="주차 가능 여부", type=openapi.TYPE_BOOLEAN, required=False),
-#             openapi.Parameter('hasElevator', openapi.IN_QUERY, description="엘리베이터 유무", type=openapi.TYPE_BOOLEAN, required=False),
-#             openapi.Parameter('parkingNumRangeMin', openapi.IN_QUERY, description="최소 주차 대수", type=openapi.TYPE_INTEGER,
-#                               enum=[0, 1, 2], required=False),
-#             openapi.Parameter('roomCount', openapi.IN_QUERY, description="방 개수 설정", type=openapi.TYPE_INTEGER,
-#                               enum=[0, 1, 2, 3, 4], required=False),
-#             openapi.Parameter('isDivision', openapi.IN_QUERY, description="분리형", type=openapi.TYPE_BOOLEAN, required=False),
-#             openapi.Parameter('isShortLease', openapi.IN_QUERY, description="단기임대", type=openapi.TYPE_BOOLEAN, required=False),
-#             openapi.Parameter('isDuplex', openapi.IN_QUERY, description="복층", type=openapi.TYPE_BOOLEAN, required=False),
-#         ],
-#     )
-#     def post(self, request):
-#         serializer = OptionSerializer(data=request.query_params)
-#         if serializer.is_valid():
-#             validated_data = serializer.validated_data
-#             messages = []
-#
-#             if validated_data.get('canParking'):
-#                 messages.append("주차가 가능한 매물만 보여드립니다.")
-#             if validated_data.get('hasElevator'):
-#                 messages.append("엘리베이터가 있는 매물만 보여드립니다.")
-#             if validated_data.get('parkingNumRangeMin') is not None:
-#                 parking_choices = {0: "상관없음", 1: "1대 이상", 2: "2대 이상"}
-#                 messages.append(f"가능한 주차 대수는 {parking_choices[validated_data.get('parkingNumRangeMin')]}입니다.")
-#             if validated_data.get('roomCount') is not None:
-#                 room_choices = {0: "상관없음", 1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
-#                 messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
-#             if validated_data.get('isDivision'):
-#                 messages.append("분리형 매물만 보여드립니다.")
-#             if validated_data.get('isShortLease'):
-#                 messages.append("단기임대 매물만 보여드립니다.")
-#             if validated_data.get('isDuplex'):
-#                 messages.append("복층 매물만 보여드립니다.")
-#
-#             return Response({"messages": messages}, status=status.HTTP_200_OK)
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+                messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}")

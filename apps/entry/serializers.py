@@ -46,7 +46,8 @@ class TypeSerializer(serializers.Serializer):
             raise serializers.ValidationError("보증금과 월세를 입력해주세요!")
 
         return data
-class AptSerializer(serializers.ModelSerializer):
+
+class OptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Options
         fields = '__all__'
@@ -65,94 +66,31 @@ class AptSerializer(serializers.ModelSerializer):
             (3, '3개'),
             (4, '4개 이상')],
         default=0, required=False)
-    hasElevator = serializers.BooleanField(required=False)
-    isShortLease = serializers.BooleanField(required=False)
-
-class OfficetelSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Options
-        fields = '__all__'
-
-    parkingNumRangeMin = serializers.ChoiceField(
-        choices=[
-            (0, '상관없음'),
-            (1, '1대 이상'),
-            (2, '2대 이상')],
-        default=0, required=False)
-    roomCount = serializers.ChoiceField(
-        choices=[
-            (0, '상관없음'),
-            (1, '1개'),
-            (2, '2개'),
-            (3, '3개'),
-            (4, '4개 이상')],
-        default=0, required=False)
-    hasElevator = serializers.BooleanField(required=False)
-    isShortLease = serializers.BooleanField(required=False)
-    canParking = serializers.BooleanField(required=False)
-
-class OnetwoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Options
-        fields = '__all__'
-
     canParking = serializers.BooleanField(required=False)
     hasElevator = serializers.BooleanField(required=False)
     isShortLease = serializers.BooleanField(required=False)
     isDivision = serializers.BooleanField(required=False)
     isDuplex = serializers.BooleanField(required=False)
 
-class HouseSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Options
-        fields = '__all__'
+    def __init__(self, *args, **kwargs):
+        option_type = kwargs.pop('option_type', None)
+        super().__init__(*args, **kwargs)
+        if option_type:
+            if option_type == 'apartment':
+                self.fields.pop('canParking')
+                self.fields.pop('isDivision')
+                self.fields.pop('isDuplex')
+            elif option_type == 'officetel':
+                self.fields.pop('isDivision')
+                self.fields.pop('isDuplex')
+            elif option_type == 'onetwo':
+                self.fields.pop('roomCount')
+                self.fields.pop('parkingNumRangeMin')
+            elif option_type == 'house':
+                self.fields.pop('parkingNumRangeMin')
+                self.fields.pop('isDivision')
+                self.fields.pop('isDuplex')
 
-    roomCount = serializers.ChoiceField(
-        choices=[
-            (0, '상관없음'),
-            (1, '1개'),
-            (2, '2개'),
-            (3, '3개'),
-            (4, '4개 이상')],
-        default=0, required=False)
-    canParking = serializers.BooleanField(required=False)
-    hasElevator = serializers.BooleanField(required=False)
-    isShortLease = serializers.BooleanField(required=False)
-# class OptionSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Options
-#         fields = '__all__'
-#
-#     canParking = serializers.BooleanField(required=False)
-#     hasElevator = serializers.BooleanField(required=False)
-#     # parkingNumRangeMin = serializers.BooleanField(required=False)
-#     # roomCount = serializers.BooleanField(required=False)
-#     isDivision = serializers.BooleanField(required=False)
-#     isShortLease = serializers.BooleanField(required=False)
-#     isDuplex = serializers.BooleanField(required=False)
-#
-#     PARKING_CHOICES = (
-#         (0, '상관없음'),
-#         (1, '1대 이상'),
-#         (2, '2대 이상'),
-#     )
-#
-#     ROOM_CHOICES = (
-#         (0, '상관없음'),
-#         (1, '1개'),
-#         (2, '2개'),
-#         (3, '3개'),
-#         (4, '4개 이상'),
-#     )
-#     parkingNumRangeMin = serializers.ChoiceField(choices=PARKING_CHOICES, default=0, required=False)
-#     roomCount = serializers.ChoiceField(choices=ROOM_CHOICES, default=0, required=False)
-#
-#     def validate(self, data):
-#         canParking = data.get('canParking')
-#         hasElevator = data.get('hasElevator')
-#         parkingNumRangeMin = data.get('parkingNumRangeMin')
-#         roomCount = data.get('roomCount')
-#         isDivision = data.get('isDivision')
-#         isShortLease = data.get('isShortLease')
-#         isDuplex = data.get('isDuplex')
+
+
 

@@ -7,10 +7,9 @@ COPY requirements.txt .
 
 # Update package lists, install git, and install MySQL client
 RUN apt-get update \
-    && apt-get install -y git \
+    && apt-get install -y git default-libmysqlclient-dev build-essential \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
-
 # Upgrade pip and install Python dependencies
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
