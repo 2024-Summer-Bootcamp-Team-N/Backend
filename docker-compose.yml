@@ -11,8 +11,3 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
-
-
-
-volumes:
-  db_data:
