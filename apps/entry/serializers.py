@@ -9,14 +9,12 @@ class RegionSerializer(serializers.ModelSerializer):
 class ResidenceSerializer(serializers.Serializer):
     apartment = serializers.BooleanField(required=False)
     officetel = serializers.BooleanField(required=False)
-    villa = serializers.BooleanField(required=False)
+    onetwo = serializers.BooleanField(required=False)
     house = serializers.BooleanField(required=False)
 
     def validate(self, data):
-        # 선택된 필드를 모두 리스트에 저장
         selected_options = [key for key, value in data.items() if value]
 
-        # 선택된 옵션이 하나가 아닌 경우 오류 발생
         if len(selected_options) != 1:
             raise serializers.ValidationError("하나만 선택해주세요.")
 
@@ -26,15 +24,13 @@ class TypeSerializer(serializers.Serializer):
     LEASE = serializers.BooleanField(required=False)
     MONTHLY_RENT = serializers.BooleanField(required=False)
     depositRangeMax = serializers.CharField(required=False)
-    # deposit = serializers.CharField(required=False)
     priceRangeMax = serializers.CharField(required=False)
 
     def validate(self, data):
         LEASE = data.get('LEASE')
         MONTHLY_RENT = data.get('MONTHLY_RENT')
-        depositRangeMax = data.get('yearly_fee')
-        # deposit = data.get('deposit')
-        priceRangeMax = data.get('monthly_fee')
+        depositRangeMax = data.get('depositRangeMax')
+        priceRangeMax = data.get('priceRangeMax')
 
         if LEASE and MONTHLY_RENT:
             raise serializers.ValidationError("하나만 선택 해주세요!")
@@ -54,13 +50,13 @@ class OptionsSerializer(serializers.ModelSerializer):
 
     parkingNumRangeMin = serializers.ChoiceField(
         choices=[
-            (0, '상관없음'),
+            (0, '없음'),
             (1, '1대 이상'),
             (2, '2대 이상')],
         default=0, required=False)
     roomCount = serializers.ChoiceField(
         choices=[
-            (0, '상관없음'),
+            (0, '전체'),
             (1, '1개'),
             (2, '2개'),
             (3, '3개'),
@@ -90,7 +86,3 @@ class OptionsSerializer(serializers.ModelSerializer):
                 self.fields.pop('parkingNumRangeMin')
                 self.fields.pop('isDivision')
                 self.fields.pop('isDuplex')
-
-
-
-
