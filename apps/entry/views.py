@@ -2,25 +2,31 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
-from drf_yasg import openapi
-from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer
+from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, OptionsSerializer
 import re
+import requests
+import os
+
 
 def parse_number(value):
     """ 문자열로 입력된 숫자를 정수로 변환 """
     return int(re.sub(r'[^0-9]', '', value))
 
-class RegionView(APIView): #지역설정
+def get_location(address):
+    url = 'https://dapi.kakao.com/v2/local/search/address.json?query=' + address
+    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}  # 환경 변수에서 API 키 가져오기
+    response = requests.get(url, headers=headers)
+    api_json = response.json()
+    if api_json['documents']:
+        address_info = api_json['documents'][0]['address']
+        crd = {"lat": str(address_info['y']), "lng": str(address_info['x'])}
+        address_name = address_info['address_name']
+        return crd
+    return None
+
+class RegionView(APIView):  # 지역설정
     @swagger_auto_schema(
-        request_body=openapi.Schema(
-            type=openapi.TYPE_OBJECT,
-            properties={
-                'province': openapi.Schema(type=openapi.TYPE_STRING, description='시/도 입력', example='인천광역시'),
-                'district': openapi.Schema(type=openapi.TYPE_STRING, description='구 입력', example='미추홀구'),
-                'street': openapi.Schema(type=openapi.TYPE_STRING, description='동 입력', example='숭의동')
-            },
-            required=['province', 'district', 'street']
-        )
+        request_body=RegionSerializer
     )
     def post(self, request):
         serializer = RegionSerializer(data=request.data)  # 데이터 본문에서 받아오기
@@ -28,86 +34,190 @@ class RegionView(APIView): #지역설정
             province = serializer.validated_data['province']
             district = serializer.validated_data['district']
             street = serializer.validated_data['street']
-            results = (province, district, street, [])
+            full_address = f"{province} {district} {street}"
+            coordinates = get_location(full_address)
 
-            return Response({
-                "message": "입력한 지역 정보입니다.",
-                "data": serializer.data,
-                "results": results.to_dict(orient='records')
-            }, status=status.HTTP_200_OK)
+            if coordinates:
+                data = {
+                    "province": province,
+                    "district": district,
+                    "street": street,
+                    "latitude": coordinates['lat'],
+                    "longitude": coordinates['lng']
+                }
+                return Response({
+                    "message": "입력한 지역 정보입니다.",
+                    "data": data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "주소를 변환할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "전부 다 입력 부탁 드립니다!"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 
 class ResidenceView(APIView): #거주형태 설정(아파트, 오피스텔, 빌라/주택, 원룸/투룸)
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('apartment', openapi.IN_QUERY, description="아파트/오피스텔 선택", type=openapi.TYPE_BOOLEAN, required=False),
-            openapi.Parameter('villa', openapi.IN_QUERY, description="주택/빌라 선택", type=openapi.TYPE_BOOLEAN, required=False),
-            openapi.Parameter('room', openapi.IN_QUERY, description="원룸/투룸 선택", type=openapi.TYPE_BOOLEAN, required=False),
-        ]
+        request_body=ResidenceSerializer
     )
     def post(self, request):
-        serializer = ResidenceSerializer(data=request.query_params)
+        serializer = ResidenceSerializer(data=request.data)
         if serializer.is_valid():
             selected_residences = [
                 key for key, value in serializer.validated_data.items() if value
             ]
             if len(selected_residences) != 1:
-                return Response({"message": "하나만 선택해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
             return Response({
                 "message": f"선택한 거주 형태는 {', '.join(selected_residences)}입니다.",
                 "data": serializer.data
             }, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
 class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
     @swagger_auto_schema(
-        manual_parameters=[
-            openapi.Parameter('yearly', openapi.IN_QUERY, description="전세 선택", type=openapi.TYPE_BOOLEAN, required=False),
-            openapi.Parameter('monthly', openapi.IN_QUERY, description="월세 선택", type=openapi.TYPE_BOOLEAN, required=False),
-            openapi.Parameter('yearly_fee', openapi.IN_QUERY, description="전세 금액 입력", type=openapi.TYPE_STRING, required=False),
-            openapi.Parameter('deposit', openapi.IN_QUERY, description="보증금 입력", type=openapi.TYPE_STRING, required=False),
-            openapi.Parameter('monthly_fee', openapi.IN_QUERY, description="월세 금액 입력", type=openapi.TYPE_STRING, required=False),
-        ],
-        responses={200: '성공적으로 처리되었습니다.', 400: '잘못된 요청입니다.'}
+        request_body=TypeSerializer
     )
     def post(self, request):
-        serializer = TypeSerializer(data=request.query_params)
+        serializer = TypeSerializer(data=request.data)
         if serializer.is_valid():
-            yearly = serializer.validated_data.get('yearly')
-            monthly = serializer.validated_data.get('monthly')
-            yearly_fee = serializer.validated_data.get('yearly_fee')
-            deposit = serializer.validated_data.get('deposit')
-            monthly_fee = serializer.validated_data.get('monthly_fee')
+            LEASE = serializer.validated_data.get('LEASE')
+            MONTHLY_RENT = serializer.validated_data.get('MONTHLY_RENT')
+            depositRangeMax = serializer.validated_data.get('depositRangeMax')
+            priceRangeMax = serializer.validated_data.get('priceRangeMax')
 
-            if yearly and monthly:
-                return Response({"message": "하나만 선택해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
-            if yearly:
-                if not yearly_fee:
-                    return Response({"message": "희망 전세금을 입력해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+            if LEASE and MONTHLY_RENT:
+                return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+            if LEASE:
+                if not depositRangeMax:
+                    return Response({"message": "희망 전세금을 입력 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
                 return Response({
-                    "message": f"입력한 전세 정보입니다. 희망하신 전세금은 '{yearly_fee}'입니다.",
+                    "message": f"입력 하신 정보 입니다. 전세금은 '{depositRangeMax}'입니다.",
                     "data": {
-                        "yearly": yearly,
-                        "yearly_fee": yearly_fee
+                        "LEASE": LEASE,
+                        "depositRangeMax": depositRangeMax
                     }
                 }, status=status.HTTP_200_OK)
-            if monthly:
-                if not (deposit and monthly_fee):
-                    return Response({"message": "보증금과 월세를 입력해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+            if MONTHLY_RENT:
+                if not (depositRangeMax and priceRangeMax):
+                    return Response({"message": "보증금 / 월세를 입력 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
                 return Response({
-                    "message": f"입력한 월세 정보입니다. 희망하신 보증금은 '{deposit}', 월세는 '{monthly_fee}'입니다.",
+                    "message": f"입력 하신 정보 입니다. 보증금은 '{depositRangeMax}', 월세는 '{priceRangeMax}'입니다.",
                     "data": {
-                        "monthly": monthly,
-                        "deposit": deposit,
-                        "monthly_fee": monthly_fee
+                        "MONTHLY_RENT": MONTHLY_RENT,
+                        "depositRangeMax": depositRangeMax,
+                        "priceRangeMax": priceRangeMax
                     }
                 }, status=status.HTTP_200_OK)
-            return Response({"message": "하나만 선택해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-# class optionView(APIView):
+class AptView(APIView):
+    @swagger_auto_schema(
+        request_body=OptionsSerializer
+    )
+    def post(self, request):
+        serializer = OptionsSerializer(data=request.data, option_type='apartment')
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            messages = []
 
+            if validated_data.get('parkingNumRangeMin') is not None:
+                parking_choices = {0: "없음", 1: "1대 이상", 2: "2대 이상"}
+                messages.append(f"가능한 주차 대수는 {parking_choices[validated_data.get('parkingNumRangeMin')]}입니다.")
 
+            if validated_data.get('roomCount') is not None:
+                if validated_data.get('roomCount') == 0:
+                    messages.append("전체 방 개수를 포함합니다.")
+                else:
+                    room_choices = {1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+                    messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+
+            if validated_data.get('isShortLease'):
+                messages.append("단기 임대 매물만 보여 드립니다.")
+
+            if messages:
+                return Response({"messages": messages}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class OfficetelView(APIView):
+    @swagger_auto_schema(
+        request_body=OptionsSerializer
+    )
+    def post(self, request):
+        serializer = OptionsSerializer(data=request.data, option_type='officetel')
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            messages = []
+            if validated_data.get('parkingNumRangeMin') is not None:
+                parking_choices = {0: "없음", 1: "1대 이상", 2: "2대 이상"}
+                messages.append(f"가능한 주차 대수는 {parking_choices[validated_data.get('parkingNumRangeMin')]}입니다.")
+            if validated_data.get('roomCount') is not None:
+                if validated_data.get('roomCount') == 0:
+                    messages.append("전체 방 개수를 포함합니다.")
+                else:
+                    room_choices = {1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+                    messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+            if validated_data.get('hasElevator'):
+                messages.append("엘리베이터가 있는 매물만 보여 드립니다.")
+            if validated_data.get('isShortLease'):
+                messages.append("단기 임대 매물만 보여 드립니다.")
+            if validated_data.get('canParking'):
+                messages.append("주차가 가능한 매물만 보여 드립니다.")
+            if messages:
+                return Response({"messages": messages}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class OneTwoView(APIView):
+    @swagger_auto_schema(
+        request_body=OptionsSerializer
+    )
+    def post(self, request):
+        serializer = OptionsSerializer(data=request.data, option_type='onetwo')
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            messages = []
+            if validated_data.get('hasElevator'):
+                messages.append("엘리베이터가 있는 매물만 보여 드립니다.")
+            if validated_data.get('isShortLease'):
+                messages.append("단기 임대 매물만 보여 드립니다.")
+            if validated_data.get('canParking'):
+                messages.append("주차가 가능한 매물만 보여 드립니다.")
+            if validated_data.get('isDivision'):
+                messages.append("분리형 매물만 보여 드립니다.")
+            if validated_data.get('isDuplex'):
+                messages.append("복층 매물만 보여 드립니다.")
+            if messages:
+                return Response({"messages": messages}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class HouseView(APIView):
+    @swagger_auto_schema(
+        request_body=OptionsSerializer
+    )
+    def post(self, request):
+        serializer = OptionsSerializer(data=request.data, option_type='house')
+        if serializer.is_valid():
+            validated_data = serializer.validated_data
+            messages = []
+            if validated_data.get('roomCount') is not None:
+                if validated_data.get('roomCount') == 0:
+                    messages.append("전체 방 개수를 포함합니다.")
+                else:
+                    room_choices = {1: "1개", 2: "2개", 3: "3개", 4: "4개 이상"}
+                    messages.append(f"방 개수는 {room_choices[validated_data.get('roomCount')]}입니다.")
+            if validated_data.get('hasElevator'):
+                messages.append("엘리베이터가 있는 매물만 보여 드립니다.")
+            if validated_data.get('isShortLease'):
+                messages.append("단기 임대 매물만 보여 드립니다.")
+            if validated_data.get('canParking'):
+                messages.append("주차가 가능한 매물만 보여 드립니다.")
+            if messages:
+                return Response({"messages": messages}, status=status.HTTP_200_OK)
+            else:
+                return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
