@@ -10,3 +10,22 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
+    depends_on:
+      - rabbitmq
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "15672:15672"  # rabbitmq 관리 콘솔
+      - "5672:5672"    # rabbitmq 메세지 브로커
+
+  celery:
+    build: .
+    command: celery -A config worker --loglevel=info #프로젝트명: config
+    volumes:
+      - .:/app
+    env_file:
+      - .env
+    depends_on:
+      - rabbitmq
