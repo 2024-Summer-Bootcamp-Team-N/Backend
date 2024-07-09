@@ -10,3 +10,6 @@ selenium
 djangorestframework-simplejwt
 django-cors-headers
 mysqlclient>=2.0.3
+django-celery-beat
+celery>=5.0.0
+psycopg2-binary
