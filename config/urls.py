@@ -23,6 +23,7 @@ urlpatterns = [
     #path('users/', include('apps.users.urls')),  # users 앱의 urls.py 포함
     #path('info/', include('apps.info.urls')),  # info 앱의 urls.py 포함
     #path('options/', include('apps.options.urls')),  # options 앱의 urls.py 포함
+    path('users/', include('apps.users.urls')),
 ]
 
 
