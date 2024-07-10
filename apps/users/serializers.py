@@ -41,5 +41,3 @@ class LoginSerializer(serializers.Serializer):
     auth_id = serializers.CharField()
     password = serializers.CharField(write_only=True)
 
-class LogoutSerializer(serializers.Serializer):
-    refresh_token = serializers.CharField()
