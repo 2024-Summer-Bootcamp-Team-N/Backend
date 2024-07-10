@@ -14,18 +14,29 @@ services:
       - rabbitmq
 
   rabbitmq:
-    image: rabbitmq:3-management
+    build:
+      context: ./rabbitmq  # rabbitmq 폴더를 빌드 컨텍스트로 지정
+      dockerfile: dockerfile.rabbitmq  # Dockerfile 지정
     container_name: rabbitmq
     ports:
       - "15672:15672"  # rabbitmq 관리 콘솔
-      - "5672:5672"    # rabbitmq 메세지 브로커
+      - "5672:5672"    # rabbitmq 메시지 브로커
+    environment:
+      RABBITMQ_DEFAULT_USER: myuser
+      RABBITMQ_DEFAULT_PASS: mypassword
+    volumes:
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
+      - ./rabbitmq/advanced.config:/etc/rabbitmq/advanced.config
 
   celery:
     build: .
-    command: celery -A config worker --loglevel=info #프로젝트명: config
+    command: celery -A config worker --loglevel=info
     volumes:
       - .:/app
     env_file:
       - .env
+    environment:
+      - CELERY_BROKER_URL=amqp://myuser:mypassword@rabbitmq:5672//
     depends_on:
       - rabbitmq

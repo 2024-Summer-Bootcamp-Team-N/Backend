@@ -37,7 +37,7 @@ class SignupView(generics.CreateAPIView):
             'message': '회원가입이 완료되었습니다',
             '이름': user.name,
             'ID': user.auth_id,
-            'pk': user.id,
+            'id': user.id,
 
         }
 
@@ -54,8 +54,8 @@ class LoginView(APIView):
                 description="Login successful",
                 examples={
                     "application/json": {
-                        "access_token": "string",
-                        "refresh_token": "string"
+                        "refresh_token": "string",
+                        "access_token": "string"
                     }
                 }
             ),
@@ -72,16 +72,17 @@ class LoginView(APIView):
         if user is not None:
             refresh = RefreshToken.for_user(user)
             return Response({
-                'access_token': str(refresh.access_token),
                 'refresh_token': str(refresh),
+                'access_token': str(refresh.access_token),
             }, status=status.HTTP_200_OK)
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
+
 class LogoutView(APIView):
-    permission_classes = (IsAuthenticated,)
+    permission_classes = [permissions.IsAuthenticated]
+
     @swagger_auto_schema(
         operation_description="User logout",
-        # request_body=LogoutSerializer,
         responses={
             205: "Logout successful",
             400: "Invalid refresh token"
@@ -89,23 +90,14 @@ class LogoutView(APIView):
     )
     def delete(self, request, *args, **kwargs):
         try:
-            user = request.user
-            logger.info(f"Logout attempt by user: {user.auth_id}")
-            # 현재 사용자에 대한 모든 Refresh Token을 블랙리스트 처리
-            refresh_token = request.data.get("refresh_token")
-            if refresh_token:
-                try:
-                    token = RefreshToken(refresh_token)
-                    token.blacklist()
-                    logger.info(f"Refresh token blacklisted for user: {user.auth_id}")
-                except Exception as e:
-                    logger.error(f"Token blacklist failed: {str(e)}")
-                    return Response({'error': 'Token blacklist failed'}, status=status.HTTP_400_BAD_REQUEST)
-            else:
-                logger.info(f"No refresh token provided for user: {user.auth_id}")
+            auth_header = request.headers.get('Authorization')
+            if not auth_header:
+                return Response({'error': 'Refresh token not provided'}, status=status.HTTP_400_BAD_REQUEST)
 
-            logger.info(f"User {user.auth_id} logged out successfully.")
+            refresh_token = auth_header.strip()  # JWT 접두사 제거
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
-            logger.error(f"Logout failed: {str(e)}")
-            return Response({'error': 'Logout failed'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Invalid refresh token'}, status=status.HTTP_400_BAD_REQUEST)
