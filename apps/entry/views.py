@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, OptionsSerializer
+from .models import Regions, Residences, Types, Options
 import re
 import requests
 import os
@@ -24,12 +25,12 @@ def get_location(address):
         return crd
     return None
 
-class RegionView(APIView):  # 지역설정
+class RegionView(APIView):
     @swagger_auto_schema(
         request_body=RegionSerializer
     )
     def post(self, request):
-        serializer = RegionSerializer(data=request.data)  # 데이터 본문에서 받아오기
+        serializer = RegionSerializer(data=request.data)
         if serializer.is_valid():
             province = serializer.validated_data['province']
             district = serializer.validated_data['district']
@@ -38,6 +39,14 @@ class RegionView(APIView):  # 지역설정
             coordinates = get_location(full_address)
 
             if coordinates:
+                region = Regions.objects.create(
+                    province=province,
+                    district=district,
+                    street=street,
+                    latitude=coordinates['lat'],
+                    longitude=coordinates['lng']
+                )
+                region.save()  # Save the object to the database
                 data = {
                     "province": province,
                     "district": district,
@@ -53,7 +62,6 @@ class RegionView(APIView):  # 지역설정
                 return Response({"message": "주소를 변환할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "전부 다 입력 부탁 드립니다!"}, status=status.HTTP_400_BAD_REQUEST)
 
-
 class ResidenceView(APIView): #거주형태 설정(아파트, 오피스텔, 빌라/주택, 원룸/투룸)
     @swagger_auto_schema(
         request_body=ResidenceSerializer
@@ -66,6 +74,10 @@ class ResidenceView(APIView): #거주형태 설정(아파트, 오피스텔, 빌�
             ]
             if len(selected_residences) != 1:
                 return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+
+            residence = Residences.objects.create(**serializer.validated_data)
+            residence.save()
+
             return Response({
                 "message": f"선택한 거주 형태는 {', '.join(selected_residences)}입니다.",
                 "data": serializer.data
@@ -89,6 +101,13 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
             if LEASE:
                 if not depositRangeMax:
                     return Response({"message": "희망 전세금을 입력 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+
+                type = Types.objects.create(
+                    LEASE=LEASE,
+                    depositRangeMax=depositRangeMax
+                )
+                type.save()
+
                 return Response({
                     "message": f"입력 하신 정보 입니다. 전세금은 '{depositRangeMax}'입니다.",
                     "data": {
@@ -99,6 +118,14 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
             if MONTHLY_RENT:
                 if not (depositRangeMax and priceRangeMax):
                     return Response({"message": "보증금 / 월세를 입력 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
+
+                type = Types.objects.create(
+                    LEASE=LEASE,
+                    depositRangeMax=depositRangeMax,
+                    priceRangeMax=priceRangeMax
+                )
+                type.save()
+
                 return Response({
                     "message": f"입력 하신 정보 입니다. 보증금은 '{depositRangeMax}', 월세는 '{priceRangeMax}'입니다.",
                     "data": {
@@ -107,6 +134,9 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
                         "priceRangeMax": priceRangeMax
                     }
                 }, status=status.HTTP_200_OK)
+
+
+
             return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -134,6 +164,9 @@ class AptView(APIView): #아파트: 주차대수, 방수, 단기임대
 
             if validated_data.get('isShortLease'):
                 messages.append("단기 임대 매물만 보여 드립니다.")
+
+            option = Options.objects.create(**validated_data)
+            option.save()
 
             if messages:
                 return Response({"messages": messages}, status=status.HTTP_200_OK)
@@ -165,6 +198,10 @@ class OfficetelView(APIView): #오피스텔: 주차대수, 방수, 주차가능,
                 messages.append("단기 임대 매물만 보여 드립니다.")
             if validated_data.get('canParking'):
                 messages.append("주차가 가능한 매물만 보여 드립니다.")
+
+            option = Options.objects.create(**validated_data)
+            option.save()
+
             if messages:
                 return Response({"messages": messages}, status=status.HTTP_200_OK)
             else:
@@ -190,6 +227,10 @@ class OneTwoView(APIView): #원/투룸: 주차가능, 단기임대, 엘리베이
                 messages.append("분리형 매물만 보여 드립니다.")
             if validated_data.get('isDuplex'):
                 messages.append("복층 매물만 보여 드립니다.")
+
+            option = Options.objects.create(**validated_data)
+            option.save()
+
             if messages:
                 return Response({"messages": messages}, status=status.HTTP_200_OK)
             else:
@@ -217,6 +258,10 @@ class HouseView(APIView): #주택/빌라: 주차가능, 단기임대, 엘리베�
                 messages.append("단기 임대 매물만 보여 드립니다.")
             if validated_data.get('canParking'):
                 messages.append("주차가 가능한 매물만 보여 드립니다.")
+
+            option = Options.objects.create(**validated_data)
+            option.save()
+
             if messages:
                 return Response({"messages": messages}, status=status.HTTP_200_OK)
             else:

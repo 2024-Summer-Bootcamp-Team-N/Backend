@@ -35,7 +35,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'apps.users',
     'apps.entry',
-    # 'apps.info',
+    'apps.info',
     # 'apps.options',
 ]
 
@@ -167,7 +167,9 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': True,
         },
+
         'myapp': {  # 각 애플리케이션 또는 모듈에 대해 로거를 설정
+
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
@@ -183,6 +185,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
 
 # Celery 설정 추가
 CELERY_BROKER_URL = env('CELERY_BROKER_URL', default='')
