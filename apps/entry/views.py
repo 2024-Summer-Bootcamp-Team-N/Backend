@@ -110,7 +110,8 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
             return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class AptView(APIView):
+
+class AptView(APIView): #아파트: 주차대수, 방수, 단기임대
     @swagger_auto_schema(
         request_body=OptionsSerializer
     )
@@ -140,7 +141,7 @@ class AptView(APIView):
                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class OfficetelView(APIView):
+class OfficetelView(APIView): #오피스텔: 주차대수, 방수, 주차가능, 단기임대, 엘리베이터
     @swagger_auto_schema(
         request_body=OptionsSerializer
     )
@@ -170,7 +171,7 @@ class OfficetelView(APIView):
                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class OneTwoView(APIView):
+class OneTwoView(APIView): #원/투룸: 주차가능, 단기임대, 엘리베이터, 분리형, 복층
     @swagger_auto_schema(
         request_body=OptionsSerializer
     )
@@ -195,7 +196,7 @@ class OneTwoView(APIView):
                 return Response({"message": "선택된 옵션이 없습니다."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class HouseView(APIView):
+class HouseView(APIView): #주택/빌라: 주차가능, 단기임대, 엘리베이터
     @swagger_auto_schema(
         request_body=OptionsSerializer
     )
