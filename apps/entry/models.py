@@ -4,6 +4,8 @@ class Regions(models.Model):
     province = models.CharField(max_length=20)
     district = models.CharField(max_length=20)
     street = models.CharField(max_length=20)
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.province} {self.district} {self.street}"
@@ -16,8 +18,9 @@ class Residences(models.Model):
 
 class Types(models.Model):
     LEASE = models.BooleanField(default=False)
-    depositRangeMax = models.IntegerField(null=True, blank=True)
     MONTHLY_RENT = models.BooleanField(default=False)
+    depositRangeMax = models.CharField(max_length=20, default="0")
+    priceRangeMax = models.CharField(max_length=20, default="0")
 
 
 
