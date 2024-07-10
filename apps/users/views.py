@@ -1,12 +1,14 @@
 from rest_framework import generics, permissions, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from .models import CustomUser
-from .serializers import UserSerializer, LoginSerializer, LogoutSerializer, RegisterSerializer
-from drf_yasg.utils import swagger_auto_schema
+from .serializers import UserSerializer, LoginSerializer, RegisterSerializer
+from drf_yasg.utils import swagger_auto_schema, logger
 from drf_yasg import openapi
+import logging
 
 
 class SignupView(generics.CreateAPIView):
@@ -76,23 +78,34 @@ class LoginView(APIView):
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
 
 class LogoutView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
+    permission_classes = (IsAuthenticated,)
     @swagger_auto_schema(
         operation_description="User logout",
-        request_body=LogoutSerializer,
+        # request_body=LogoutSerializer,
         responses={
             205: "Logout successful",
             400: "Invalid refresh token"
         }
     )
-    def post(self, request, *args, **kwargs):
-        serializer = LogoutSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        refresh_token = serializer.validated_data['refresh_token']
+    def delete(self, request, *args, **kwargs):
         try:
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            user = request.user
+            logger.info(f"Logout attempt by user: {user.auth_id}")
+            # 현재 사용자에 대한 모든 Refresh Token을 블랙리스트 처리
+            refresh_token = request.data.get("refresh_token")
+            if refresh_token:
+                try:
+                    token = RefreshToken(refresh_token)
+                    token.blacklist()
+                    logger.info(f"Refresh token blacklisted for user: {user.auth_id}")
+                except Exception as e:
+                    logger.error(f"Token blacklist failed: {str(e)}")
+                    return Response({'error': 'Token blacklist failed'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                logger.info(f"No refresh token provided for user: {user.auth_id}")
+
+            logger.info(f"User {user.auth_id} logged out successfully.")
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception as e:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            logger.error(f"Logout failed: {str(e)}")
+            return Response({'error': 'Logout failed'}, status=status.HTTP_400_BAD_REQUEST)
