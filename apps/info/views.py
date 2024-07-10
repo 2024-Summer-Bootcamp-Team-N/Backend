@@ -9,13 +9,45 @@ from ..entry.views import get_location
 from drf_yasg.utils import swagger_auto_schema
 
 
-class URLGenerator(APIView):
+class GenerateURLView(APIView):
 
     @swagger_auto_schema(
         request_body=RegionSerializer,  # 사용자 입력 데이터의 Serializer 클래스
         responses={200: RegionSerializer},  # 응답의 Serializer 클래스
         operation_description="Generate URL based on user input.",  # 작업 설명
     )
+    def generate_dabang_url(self, region_lat, region_lng, residence_type, lease_type, options):
+        base_url = "https://www.dabangapp.com/map/"
+        residence_types = {
+            "one_two_room": "onetwo",
+            "apartment": "apt",
+            "house": "house",
+            "officetel": "officetel"
+        }
+
+        url = f"{base_url}{residence_types[residence_type]}?"
+
+        url += f"m_lat={region_lat}&m_lng={region_lng}&m_zoom=15&"
+
+        if options.get("parking"):
+            url += "canParking=true&"
+        if options.get("short_lease"):
+            url += "isShortLease=true&"
+        if options.get("elevator"):
+            url += "hasElevator=true&"
+        if options.get("division") and residence_type == "one_two_room":
+            url += "isDivision=true&"
+        if options.get("duplex") and residence_type == "one_two_room":
+            url += "isDuplex=true&"
+        if options.get("parking_num_min"):
+            url += f"parkingNumRangeMin={options['parking_num_min']}&"
+        if options.get("room_count"):
+            url += f"roomCount={options['room_count']}&"
+
+        if url.endswith("&"):
+            url = url[:-1]
+
+        return url
 
     def post(self, request, format=None):
         # 사용자 입력 값 받아오기

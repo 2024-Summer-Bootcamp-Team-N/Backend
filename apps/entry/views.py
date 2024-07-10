@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from drf_yasg.utils import swagger_auto_schema
 from .serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, OptionsSerializer
+from .models import Regions
 import re
 import requests
 import os
@@ -24,12 +25,12 @@ def get_location(address):
         return crd
     return None
 
-class RegionView(APIView):  # 지역설정
+class RegionView(APIView):
     @swagger_auto_schema(
         request_body=RegionSerializer
     )
     def post(self, request):
-        serializer = RegionSerializer(data=request.data)  # 데이터 본문에서 받아오기
+        serializer = RegionSerializer(data=request.data)
         if serializer.is_valid():
             province = serializer.validated_data['province']
             district = serializer.validated_data['district']
@@ -38,6 +39,14 @@ class RegionView(APIView):  # 지역설정
             coordinates = get_location(full_address)
 
             if coordinates:
+                region = Regions.objects.create(
+                    province=province,
+                    district=district,
+                    street=street,
+                    latitude=coordinates['lat'],
+                    longitude=coordinates['lng']
+                )
+                region.save()  # Save the object to the database
                 data = {
                     "province": province,
                     "district": district,
@@ -52,7 +61,6 @@ class RegionView(APIView):  # 지역설정
             else:
                 return Response({"message": "주소를 변환할 수 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
         return Response({"message": "전부 다 입력 부탁 드립니다!"}, status=status.HTTP_400_BAD_REQUEST)
-
 
 class ResidenceView(APIView): #거주형태 설정(아파트, 오피스텔, 빌라/주택, 원룸/투룸)
     @swagger_auto_schema(

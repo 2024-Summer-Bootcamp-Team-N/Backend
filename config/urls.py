@@ -21,7 +21,7 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     # 위와 같이 작성
     #path('users/', include('apps.users.urls')),  # users 앱의 urls.py 포함
-    #path('info/', include('apps.info.urls')),  # info 앱의 urls.py 포함
+    path('info/', include('apps.info.urls')),  # info 앱의 urls.py 포함
     #path('options/', include('apps.options.urls')),  # options 앱의 urls.py 포함
     path('users/', include('apps.users.urls')),
 ]
