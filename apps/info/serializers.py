@@ -1,4 +1,6 @@
 from rest_framework import serializers
+
+from .models import GeneratedURL
 from ..entry.models import Regions, Residences, Types, Options
 
 class RegionSerializer(serializers.ModelSerializer):
@@ -23,3 +25,8 @@ class OptionsSerializer(serializers.ModelSerializer):
             'parking_num_range_min', 'is_short_lease', 'room_count',
             'has_elevator', 'can_parking', 'is_division', 'is_duplex'
         ]
+
+class GeneratedURLSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GeneratedURL
+        fields = ['url', 'created_at']

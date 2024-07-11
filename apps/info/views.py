@@ -12,7 +12,7 @@ def parse_number(value):
 
 def get_location(address):
     url = 'https://dapi.kakao.com/v2/local/search/address.json?query=' + address
-    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}  # 환경 변수에서 API 키 가져오기
+    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}
     response = requests.get(url, headers=headers)
     api_json = response.json()
     if api_json['documents']:
@@ -61,7 +61,14 @@ class URLGenerator(APIView):
             if options.parkingNumRangeMin > 0:
                 params.append(f'parkingNumRangeMin={options.parkingNumRangeMin}')
             if options.roomCount > 0:
-                params.append(f'roomCount={options.roomCount}')
+                room_count_map = {
+                    1: "ONE_ROOM",
+                    2: "TWO_ROOM",
+                    3: "THREE_ROOM",
+                    4: "FOUR_ROOM",
+                }
+                if options.roomCount in room_count_map:
+                    params.append(f'roomCount={room_count_map[options.roomCount]}')
             if options.isShortLease:
                 params.append('isShortLease=true')
             if options.isDivision:
