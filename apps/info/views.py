@@ -1,171 +1,79 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import Region, Residence, PropertyType, Option
-from ..entry.serializers import RegionSerializer, ResidenceSerializer, TypeSerializer, OptionsSerializer
-from urllib.parse import urlencode
-from django.http import HttpResponse
-from ..entry.views import get_location
-from drf_yasg.utils import swagger_auto_schema
+from apps.entry.models import Regions, Residences, Types, Options
+import re
+import requests
+import os
 
+def parse_number(value):
+    """ 문자열로 입력된 숫자를 정수로 변환, '억'과 '만원' 단위를 처리 """
+    value = value.replace('억', '0000').replace('만원', '')
+    return str(int(re.sub(r'[^0-9]', '', value)))
 
-class GenerateURLView(APIView):
+def get_location(address):
+    url = 'https://dapi.kakao.com/v2/local/search/address.json?query=' + address
+    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}  # 환경 변수에서 API 키 가져오기
+    response = requests.get(url, headers=headers)
+    api_json = response.json()
+    if api_json['documents']:
+        address_info = api_json['documents'][0]['address']
+        crd = {"lat": str(address_info['y']), "lng": str(address_info['x'])}
+        address_name = address_info['address_name']
+        return crd
+    return None
 
-    @swagger_auto_schema(
-        request_body=RegionSerializer,  # 사용자 입력 데이터의 Serializer 클래스
-        responses={200: RegionSerializer},  # 응답의 Serializer 클래스
-        operation_description="Generate URL based on user input.",  # 작업 설명
-    )
-    def generate_dabang_url(self, region_lat, region_lng, residence_type, lease_type, options):
-        base_url = "https://www.dabangapp.com/map/"
-        residence_types = {
-            "one_two_room": "onetwo",
-            "apartment": "apt",
-            "house": "house",
-            "officetel": "officetel"
-        }
+class URLGenerator(APIView):
+    def get(self, request):
+        try:
+            region = Regions.objects.order_by('-id').first()
+            residence = Residences.objects.order_by('-id').first()
+            types = Types.objects.order_by('-id').first()
+            options = Options.objects.order_by('-id').first()
 
-        url = f"{base_url}{residence_types[residence_type]}?"
+            if not residence:
+                return Response({"error": "거주 형태가 선택되지 않았습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        url += f"m_lat={region_lat}&m_lng={region_lng}&m_zoom=15&"
-
-        if options.get("parking"):
-            url += "canParking=true&"
-        if options.get("short_lease"):
-            url += "isShortLease=true&"
-        if options.get("elevator"):
-            url += "hasElevator=true&"
-        if options.get("division") and residence_type == "one_two_room":
-            url += "isDivision=true&"
-        if options.get("duplex") and residence_type == "one_two_room":
-            url += "isDuplex=true&"
-        if options.get("parking_num_min"):
-            url += f"parkingNumRangeMin={options['parking_num_min']}&"
-        if options.get("room_count"):
-            url += f"roomCount={options['room_count']}&"
-
-        if url.endswith("&"):
-            url = url[:-1]
-
-        return url
-
-    def post(self, request, format=None):
-        # 사용자 입력 값 받아오기
-        region_data = request.data.get('region', {})
-        residence_data = request.data.get('residence', {})
-        type_data = request.data.get('type', {})
-        options_data = request.data.get('options', {})
-
-        # 시리얼라이저로 데이터 검증
-        region_serializer = RegionSerializer(data=region_data)
-        residence_serializer = ResidenceSerializer(data=residence_data)
-        type_serializer = TypeSerializer(data=type_data)
-        options_serializer = OptionsSerializer(data=options_data)
-
-        if not (
-                region_serializer.is_valid() and residence_serializer.is_valid() and type_serializer.is_valid() and options_serializer.is_valid()):
-            return Response({
-                'region': region_serializer.errors,
-                'residence': residence_serializer.errors,
-                'type': type_serializer.errors,
-                'options': options_serializer.errors
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        # 주소 정보에서 위도, 경도 얻기
-        address = f"{region_data.get('province')}, {region_data.get('district')}, {region_data.get('street')}"
-        crd = get_location(address)
-
-        if crd is None:
-            return Response({'error': 'Invalid address.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 임대 유형 설정
-        selling_type = None
-        if type_data.get('lease'):
-            selling_type = "LEASE"
-        elif type_data.get('monthly_rent'):
-            selling_type = "MONTHLY_RENT"
-        else:
-            return Response({'error': 'Invalid selling type.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 기본 매개변수 설정
-        base_params = {
-            "sellingTypeList": f'["{selling_type}"]',
-            "m_lat": crd['lat'],
-            "m_lng": crd['lng'],
-            "m_zoom": 15
-        }
-
-        # 임대 유형에 따른 매개변수 설정
-        params = {}
-        if selling_type == "LEASE":
-            params["depositRangeMax"] = type_data.get('depositRangeMax')
-        elif selling_type == "MONTHLY_RENT":
-            params["depositRangeMax"] = type_data.get('depositRangeMax')
-            params["priceRangeMax"] = type_data.get('priceRangeMax')
-
-        # 주거 형태 설정
-        property_type = None
-        if residence_data.get('apartment'):
-            property_type = "apt"
-        elif residence_data.get('officetel'):
-            property_type = "officetel"
-        elif residence_data.get('house'):
-            property_type = "house"
-        elif residence_data.get('onetwo'):
-            property_type = "onetwo"
-        else:
-            return Response({'error': 'Invalid residence type.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 각 주거 형태에 따른 추가 옵션 설정
-        if property_type in ["apt", "officetel", "house", "onetwo"]:
-            params.update({
-                "parkingNumRangeMin": options_data.get('parkingNumRangeMin'),
-                "isShortLease": options_data.get('isShortLease'),
-                "roomCount": options_data.get('roomCount')
-            })
-            if property_type in ["officetel", "house", "onetwo"]:
-                params.update({
-                    "hasElevator": options_data.get('hasElevator')
-                })
-            if property_type in ["house", "onetwo"]:
-                params.update({
-                    "canParking": options_data.get('canParking')
-                })
-            if property_type == "onetwo":
-                params.update({
-                    "isDivision": options_data.get('isDivision'),
-                    "isDuplex": options_data.get('isDuplex')
-                })
-        else:
-            return Response({'error': 'Invalid property type.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 방 수가 숫자라면 변환하여 설정
-        room_count_map = {
-            "1": "ONE_ROOM",
-            "2": "TWO_ROOM",
-            "3": "THREE_ROOM",
-            "4": "FOUR_ROOM",
-            "5": "FOUR_ROOM",
-            "6": "FOUR_ROOM",
-            "7": "FOUR_ROOM",
-            "8": "FOUR_ROOM",
-            "9": "FOUR_ROOM",
-            "10": "FOUR_ROOM",
-        }
-        if params["roomCount"].isdigit():
-            room_count_value = params["roomCount"]
-            if room_count_value in room_count_map:
-                params["roomCount"] = room_count_map[room_count_value]
+            if residence.apartment:
+                base_url = "https://dabangapp.com/map/apt?"
+            elif residence.officetel:
+                base_url = "https://dabangapp.com/map/officetel?"
+            elif residence.house:
+                base_url = "https://dabangapp.com/map/house?"
+            elif residence.onetwo:
+                base_url = "https://dabangapp.com/map/onetwo?"
             else:
-                return Response({'error': 'Invalid room count.'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({"error": "거주 형태가 선택되지 않았습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # URL 생성
-        base_url = f"https://www.dabangapp.com/map/{property_type}?"
-        param_str = urlencode({**params, **base_params})
-        full_url = base_url + param_str
+            params = []
 
-        region = region_serializer.save(url=full_url)
+            if types.LEASE:
+                params.append('sellingTypeList=%5B%22LEASE%22%5D')
+                params.append(f'depositRangeMax={parse_number(types.depositRangeMax)}')
+            if types.MONTHLY_RENT:
+                params.append('sellingTypeList=%5B%22MONTHLY_RENT%22%5D')
+                params.append(f'depositRangeMax={parse_number(types.depositRangeMax)}')
+                params.append(f'priceRangeMax={parse_number(types.priceRangeMax)}')
 
-        response_data = region_serializer.data
-        response_data['url'] = full_url
-        return Response(response_data, status=status.HTTP_200_OK)
+            if options.canParking:
+                params.append('canParking=true')
+            if options.hasElevator:
+                params.append('hasElevator=true')
+            if options.parkingNumRangeMin > 0:
+                params.append(f'parkingNumRangeMin={options.parkingNumRangeMin}')
+            if options.roomCount > 0:
+                params.append(f'roomCount={options.roomCount}')
+            if options.isShortLease:
+                params.append('isShortLease=true')
+            if options.isDivision:
+                params.append('isDivision=true')
+            if options.isDuplex:
+                params.append('isDuplex=true')
+
+            url = base_url + "&".join(params)
+            url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=16'
+
+            return Response({"url": url}, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
