@@ -1,25 +1,25 @@
 from rest_framework import serializers
-from .models import Region, Residence, PropertyType, Option
+from ..entry.models import Regions, Residences, Types, Options
 
 class RegionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Region
-        fields = ['province', 'district', 'street','id','name','url']
+        model = Regions
+        fields = ['province', 'district', 'street', 'id']
 
 class ResidenceSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Residence
+        model = Residences
         fields = ['apartment', 'officetel', 'house', 'onetwo']
 
 class TypeSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PropertyType
-        fields = ['lease', 'monthly_rent', 'depositRangeMax', 'priceRangeMax']
+        model = Types
+        fields = ['lease', 'monthly_rent', 'deposit_range_max', 'price_range_max']
 
 class OptionsSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Option
+        model = Options
         fields = [
-            'parkingNumRangeMin', 'isShortLease', 'roomCount',
-            'hasElevator', 'canParking', 'isDivision', 'isDuplex'
+            'parking_num_range_min', 'is_short_lease', 'room_count',
+            'has_elevator', 'can_parking', 'is_division', 'is_duplex'
         ]

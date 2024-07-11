@@ -1,6 +1,6 @@
 from django.urls import path
-from . import views
+from .views import URLGenerator
 
 urlpatterns = [
-    path('generate_url/', views.GenerateURLView.as_view(), name='info-detail'),
+    path('generate-url/', URLGenerator.as_view(), name='generate-url'),
 ]

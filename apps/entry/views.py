@@ -135,8 +135,6 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
                     }
                 }, status=status.HTTP_200_OK)
 
-
-
             return Response({"message": "하나만 선택 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
