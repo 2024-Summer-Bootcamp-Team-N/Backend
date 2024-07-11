@@ -12,7 +12,7 @@ def parse_number(value):
 
 def get_location(address):
     url = 'https://dapi.kakao.com/v2/local/search/address.json?query=' + address
-    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}  # 환경 변수에서 API 키 가져오기
+    headers = {"Authorization": "KakaoAK " + os.getenv("KAKAO_AK")}
     response = requests.get(url, headers=headers)
     api_json = response.json()
     if api_json['documents']:
