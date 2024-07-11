@@ -12,19 +12,15 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    urlconf='config.api_urls'
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('entry/', include('apps.entry.urls')),  # entry 앱의 urls.py 포함
+    path('api/v1/entry/', include('apps.entry.urls')),
+    path('api/v1/users/', include('apps.users.urls')),
+    path('api/v1/info/', include('apps.info.urls')),
+    #path('api/v1/options/', include('apps.options,urls')),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
-    # 위와 같이 작성
-    #path('users/', include('apps.users.urls')),  # users 앱의 urls.py 포함
-    path('info/', include('apps.info.urls')),  # info 앱의 urls.py 포함
-    #path('options/', include('apps.options.urls')),  # options 앱의 urls.py 포함
-    path('users/', include('apps.users.urls')),
 ]
-
-
-
