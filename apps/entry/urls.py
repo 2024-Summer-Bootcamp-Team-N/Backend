@@ -1,12 +1,13 @@
 from django.urls import path
-from .views import RegionView, ResidenceView, TypeView, AptView, OfficetelView, OneTwoView, HouseView
+from . import views
 
 urlpatterns = [
-    path('regions', RegionView.as_view(), name='region'),
-    path('residences', ResidenceView.as_view(), name='residence'),
-    path('types', TypeView.as_view(), name='type'),
-    path('residences/apt', AptView.as_view(), name='apartment-options'),
-    path('residences/officetel', OfficetelView.as_view(), name='officetel-options'),
-    path('residences/onetwo', OneTwoView.as_view(), name='onetwo-options'),
-    path('residences/house', HouseView.as_view(), name='house-options'),
+    path('regions', views.RegionView.as_view(), name='entry_regions_create'),
+    path('residences', views.ResidenceView.as_view(), name='entry_residences_create'),
+    path('residences/apt', views.AptView.as_view(), name='entry_residences_apt_create'),
+    path('residences/house', views.HouseView.as_view(), name='entry_residences_house_create'),
+    path('residences/officetel', views.OfficetelView.as_view(), name='entry_residences_officetel_create'),
+    path('residences/onetwo', views.OneTwoView.as_view(), name='entry_residences_onetwo_create'),
+    path('types', views.TypeView.as_view(), name='entry_types_create'),
 ]
+
