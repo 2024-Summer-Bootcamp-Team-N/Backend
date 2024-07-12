@@ -10,17 +10,19 @@ services:
       - .env
     environment:
       - PYTHONUNBUFFERED=1
+      - PATH=/usr/local/bin:$PATH
     depends_on:
       - rabbitmq
+    mem_limit: 1g  # 메모리 제한 추가
 
   rabbitmq:
     build:
-      context: ./rabbitmq  # rabbitmq 폴더를 빌드 컨텍스트로 지정
-      dockerfile: dockerfile.rabbitmq  # Dockerfile 지정
+      context: ./rabbitmq
+      dockerfile: Dockerfile.rabbitmq
     container_name: rabbitmq
     ports:
-      - "15672:15672"  # rabbitmq 관리 콘솔
-      - "5672:5672"    # rabbitmq 메시지 브로커
+      - "15672:15672"
+      - "5672:5672"
     environment:
       RABBITMQ_DEFAULT_USER: myuser
       RABBITMQ_DEFAULT_PASS: mypassword
@@ -30,7 +32,9 @@ services:
       - ./rabbitmq/advanced.config:/etc/rabbitmq/advanced.config
 
   celery:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.celery
     command: celery -A config worker --loglevel=info
     volumes:
       - .:/app
@@ -38,5 +42,7 @@ services:
       - .env
     environment:
       - CELERY_BROKER_URL=amqp://myuser:mypassword@rabbitmq:5672//
+      - PATH=/usr/local/bin:$PATH
     depends_on:
       - rabbitmq
+    mem_limit: 1g  # 메모리 제한 추가

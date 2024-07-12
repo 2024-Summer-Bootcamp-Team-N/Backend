@@ -4,7 +4,8 @@ from rest_framework import status
 import re
 import requests
 import os
-
+from apps.entry.models import Regions, Residences, Types, Options
+from .models import GeneratedURL
 def parse_number(value):
     """ 문자열로 입력된 숫자를 정수로 변환, '억'과 '만원' 단위를 처리 """
     value = value.replace('억', '0000').replace('만원', '')
@@ -78,6 +79,8 @@ class URLGenerator(APIView):
 
             url = base_url + "&".join(params)
             url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=16'
+
+            GeneratedURL.objects.create(url=url)
 
             return Response({"url": url}, status=status.HTTP_200_OK)
 

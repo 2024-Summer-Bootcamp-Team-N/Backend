@@ -1,0 +1,25 @@
+FROM python:3.9
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y \
+    git \
+    default-libmysqlclient-dev \
+    build-essential \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt ./
+RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery
+
+ENV PYTHONUNBUFFERED=1
+ENV DJANGO_SETTINGS_MODULE=config.settings
+ENV CELERY_BROKER_URL=amqp://myuser:mypassword@rabbitmq:5672//
+
+RUN groupadd -r myuser && useradd -r -g myuser myuser
+
+USER myuser
+
+COPY . .
+
+CMD ["celery", "-A", "config", "worker", "--loglevel=info"]

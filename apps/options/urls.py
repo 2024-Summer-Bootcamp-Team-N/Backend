@@ -1,7 +1,6 @@
 from django.urls import path
-from . import views
+from .views import GenerateAndCrawlView
 
 urlpatterns = [
-    path('', views.OptionListView.as_view(), name='option-list'),
-    path('<int:pk>/', views.OptionDetailView.as_view(), name='option-detail'),
+    path('generate-and-crawl/', GenerateAndCrawlView.as_view(), name='generate-and-crawl'),
 ]
