@@ -4,7 +4,7 @@ from rest_framework import status
 import re
 import requests
 import os
-from apps.entry.models import Regions, Residences, Types, Options
+from ..entry.models import Regions, Residences, Types, Options
 from .models import GeneratedURL
 def parse_number(value):
     """ 문자열로 입력된 숫자를 정수로 변환, '억'과 '만원' 단위를 처리 """
@@ -50,10 +50,9 @@ class URLGenerator(APIView):
             if types.LEASE:
                 params.append('sellingTypeList=%5B%22LEASE%22%5D')
                 params.append(f'depositRangeMax={parse_number(types.depositRangeMax)}')
-            if types.MONTHLY_RENT:
+            elif types.MONTHLY_RENT:
                 params.append('sellingTypeList=%5B%22MONTHLY_RENT%22%5D')
-                params.append(f'depositRangeMax={parse_number(types.depositRangeMax)}')
-                params.append(f'priceRangeMax={parse_number(types.priceRangeMax)}')
+                params.append(f'depositRangeMax={parse_number(types.depositRangeMax)}&priceRangeMax={parse_number(types.priceRangeMax)}')
 
             if options.canParking:
                 params.append('canParking=true')
@@ -78,7 +77,7 @@ class URLGenerator(APIView):
                 params.append('isDuplex=true')
 
             url = base_url + "&".join(params)
-            url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=16'
+            url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=15'
 
             GeneratedURL.objects.create(url=url)
 
