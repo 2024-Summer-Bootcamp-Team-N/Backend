@@ -11,21 +11,21 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - PATH=/usr/local/bin:$PATH
+      - PYTHONPATH=/app
     depends_on:
       - rabbitmq
-    mem_limit: 1g  # 메모리 제한 추가
 
   rabbitmq:
-    build:
-      context: ./rabbitmq
-      dockerfile: Dockerfile.rabbitmq
+    image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
       - "15672:15672"
       - "5672:5672"
+    env_file:
+      - .env
     environment:
-      RABBITMQ_DEFAULT_USER: myuser
-      RABBITMQ_DEFAULT_PASS: mypassword
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
     volumes:
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
@@ -41,8 +41,11 @@ services:
     env_file:
       - .env
     environment:
-      - CELERY_BROKER_URL=amqp://myuser:mypassword@rabbitmq:5672//
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND}
       - PATH=/usr/local/bin:$PATH
+      - PYTHONPATH=/app
     depends_on:
       - rabbitmq
-    mem_limit: 1g  # 메모리 제한 추가

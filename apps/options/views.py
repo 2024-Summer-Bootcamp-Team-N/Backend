@@ -3,16 +3,27 @@ from rest_framework.response import Response
 from rest_framework import status
 from apps.info.models import GeneratedURL
 from .models import RoomInfo
-import logging
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+import logging
 import time
+import environ
+import os
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
+env = environ.Env()
+BASE_DIR = Path(__file__).resolve().parent.parent
+environ.Env.read_env(os.path.join(BASE_DIR,'.env'))
+# 환경변수 로드
+disable_blink_features = env('DISABLE_BLINK_FEATURES')
+exclude_switches = env('EXCLUDE_SWITCHES')
+use_automation_extension = env('USE_AUTOMATION_EXTENSION')
+user_agent = env('USER_AGENT')
 
 class GenerateAndCrawlView(APIView):
     def get(self, request, *args, **kwargs):
@@ -32,11 +43,12 @@ class GenerateAndCrawlView(APIView):
             chrome_options.add_argument("--disable-gpu")
             chrome_options.add_argument("--ignore-ssl-errors=yes")
             chrome_options.add_argument("--ignore-certificate-errors")
-            chrome_options.add_argument("--disable-blink-features=AutomationControlled")  # 자동화 탐지 방지
-            chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])  # 자동화 표시 제거
-            chrome_options.add_experimental_option('useAutomationExtension', False)  # 자동화 확장 기능 사용 안 함
-            chrome_options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.150 Safari/537.36")
-            chrome_options.binary_location = "/usr/bin/chromium"
+            chrome_options.add_argument(disable_blink_features)
+            chrome_options.add_experimental_option("excludeSwitches", [exclude_switches])
+            chrome_options.add_experimental_option('useAutomationExtension', use_automation_extension.lower() == 'true')
+            chrome_options.add_argument(f"user-agent={user_agent}")
+
+            chrome_options.binary_location = "/usr/bin/chromium" #크로미움 경로
 
             # Chrome WebDriver 설정
             service = Service('/usr/bin/chromedriver')
