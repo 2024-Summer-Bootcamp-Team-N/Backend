@@ -11,8 +11,7 @@ app = Celery('config')
 # Django의 설정 파일에서 CELERY 관련 설정을 불러옴
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
-# Django의 모든 등록된 앱의 tasks.py 파일을 자동으로 불러옴
-app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
+app.autodiscover_tasks(lambda: settings.INSTALLED_APPS + ['tasks'])
 
 # Celery 설정 업데이트
 app.conf.broker_connection_retry_on_startup = True

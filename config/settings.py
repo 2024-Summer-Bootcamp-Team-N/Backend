@@ -36,7 +36,8 @@ INSTALLED_APPS = [
     'apps.users',
     'apps.entry',
     'apps.info',
-    # 'apps.options',
+    'apps.options',
+    'celery'
 ]
 
 MIDDLEWARE = [
@@ -143,33 +144,15 @@ SWAGGER_SETTINGS = {
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
+    'disable_existing_loggers': True,
     'handlers': {
         'console': {
             'level': 'DEBUG',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple',
         },
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': True,
-        },
-
-        'myapp': {  # 각 애플리케이션 또는 모듈에 대해 로거를 설정
-
             'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': True,
