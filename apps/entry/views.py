@@ -120,7 +120,7 @@ class TypeView(APIView): #월세/전세 --> 전세보증금 / 월세
                     return Response({"message": "보증금 / 월세를 입력 해주세요!"}, status=status.HTTP_400_BAD_REQUEST)
 
                 type = Types.objects.create(
-                    LEASE=LEASE,
+                    MONTHLY_RENT=MONTHLY_RENT,
                     depositRangeMax=depositRangeMax,
                     priceRangeMax=priceRangeMax
                 )
