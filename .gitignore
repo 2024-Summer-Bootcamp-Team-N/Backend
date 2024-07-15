@@ -168,3 +168,5 @@ data
 certbot
 backend/erlang.cookie
 mnesia/*
+
+rabbitmq/definitions.json
