@@ -9,8 +9,10 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     pkg-config \
     supervisor \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    chromium \
+    chromium-driver && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # 사용자 및 그룹 생성
 RUN groupadd -r myuser && useradd -r -g myuser myuser

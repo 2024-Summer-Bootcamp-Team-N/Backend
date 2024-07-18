@@ -19,3 +19,4 @@ openai
 channels
 channels-redis
 daphne
+aiohttp
