@@ -1,45 +1,43 @@
-<!-- websocket_test.html -->
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>WebSocket Test</title>
+    <title>WebSocket Chat with ChatGPT</title>
 </head>
 <body>
-    <h1>WebSocket Test</h1>
-    <textarea id="messages" cols="100" rows="20" readonly></textarea><br>
-    <input id="messageInput" type="text" size="100">
-    <button onclick="sendMessage()">Send</button>
+    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+    <input id="chat-message-input" type="text" size="100"><br>
+    <input id="chat-message-submit" type="button" value="Send">
 
     <script>
-        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-        const wsPath = `${wsScheme}://${window.location.host}/ws/chat/`;
-        const socket = new WebSocket(wsPath);
+        const chatSocket = new WebSocket(
+            'ws://' + window.location.host + '/ws/chat/'
+        );
 
-        socket.onopen = function(event) {
-            document.getElementById('messages').value += "WebSocket connected.\n";
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            document.querySelector('#chat-log').value += ('ChatGPT: ' + data.message + '\n');
         };
 
-        socket.onmessage = function(event) {
-            const data = JSON.parse(event.data);
-            document.getElementById('messages').value += `Received: ${data.message}\n`;
+        chatSocket.onclose = function(e) {
+            console.error('Chat socket closed unexpectedly');
         };
 
-        socket.onclose = function(event) {
-            document.getElementById('messages').value += "WebSocket disconnected.\n";
+        document.querySelector('#chat-message-input').focus();
+        document.querySelector('#chat-message-input').onkeyup = function(e) {
+            if (e.keyCode === 13) {  // enter, return
+                document.querySelector('#chat-message-submit').click();
+            }
         };
 
-        socket.onerror = function(event) {
-            document.getElementById('messages').value += `WebSocket error: ${event.message}\n`;
+        document.querySelector('#chat-message-submit').onclick = function(e) {
+            const messageInputDom = document.querySelector('#chat-message-input');
+            const message = messageInputDom.value;
+            chatSocket.send(JSON.stringify({
+                'message': message
+            }));
+            document.querySelector('#chat-log').value += ('You: ' + message + '\n');
+            messageInputDom.value = '';
         };
-
-        function sendMessage() {
-            const message = document.getElementById('messageInput').value;
-            socket.send(JSON.stringify({'message': message}));
-            document.getElementById('messages').value += `Sent: ${message}\n`;
-            document.getElementById('messageInput').value = '';
-        }
     </script>
 </body>
 </html>

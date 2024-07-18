@@ -11,6 +11,8 @@ env = environ.Env()
 # 환경변수 파일 불러오기
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
 # Quick-start development settings - unsuitable for production
 
 # 장고 시크릿키
@@ -180,7 +182,6 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
-
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
