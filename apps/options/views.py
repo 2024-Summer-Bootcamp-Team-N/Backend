@@ -64,7 +64,7 @@ class GenerateAndCrawlView(APIView):
 
                 while True:
                     # 특정 요소가 로드될 때까지 대기
-                    WebDriverWait(driver, 20).until(
+                    WebDriverWait(driver, 10).until(
                         EC.presence_of_element_located((By.CLASS_NAME, "styled__Price-sc-1lx6b5d-4"))
                     )
 
@@ -87,7 +87,7 @@ class GenerateAndCrawlView(APIView):
                     # 다음 페이지 버튼 클릭하기
                     try:
                         # 현재 페이지 버튼 찾기
-                        current_page_button = WebDriverWait(driver, 30).until(
+                        current_page_button = WebDriverWait(driver, 10).until(
                             EC.presence_of_element_located((By.CLASS_NAME, "styled__PageBtn-d24fjp-2.cbZgbl"))
                         )
 
@@ -97,7 +97,7 @@ class GenerateAndCrawlView(APIView):
                         # 다음 페이지로 이동
                         if next_page_button:
                             next_page_button.click()
-                            time.sleep(2)  # 페이지 로딩 시간을 고려하여 잠시 대기
+                            time.sleep(0.1)  # 페이지 로딩 시간을 고려하여 잠시 대기
                         else:
                             break  # 다음 페이지 버튼이 없으면 루프 종료
 
