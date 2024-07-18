@@ -1,25 +1,46 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>WebSocket Chat with ChatGPT</title>
+    <title>부동산 중개인 챗봇</title>
+    <meta charset="UTF-8">
 </head>
 <body>
-    <textarea id="chat-log" cols="100" rows="20"></textarea><br>
+    <textarea id="chat-log" cols="100" rows="20" readonly></textarea><br>
     <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="Send">
+    <input id="chat-message-submit" type="button" value="전송">
 
     <script>
         const chatSocket = new WebSocket(
             'ws://' + window.location.host + '/ws/chat/'
         );
 
-        chatSocket.onmessage = function(e) {
+        let isReceivingResponse = false;
+
+        chatSocket.onmessage = async function(e) {
             const data = JSON.parse(e.data);
-            document.querySelector('#chat-log').value += ('ChatGPT: ' + data.message + '\n');
+            const chatLog = document.querySelector('#chat-log');
+
+            if (!isReceivingResponse) {
+                chatLog.value += '집피티: ';
+                isReceivingResponse = true;
+            }
+
+            // 응답을 한 글자씩 추가하는 함수
+            const addCharsToChatLog = async (message) => {
+                for (let i = 0; i < message.length; i++) {
+                    chatLog.value += message[i];
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                    await new Promise(resolve => setTimeout(resolve, 50)); // 50ms 지연
+                }
+                chatLog.value += '\n';
+                isReceivingResponse = false;
+            };
+
+            await addCharsToChatLog(data.message);
         };
 
         chatSocket.onclose = function(e) {
-            console.error('Chat socket closed unexpectedly');
+            console.error('채팅 연결이 예기치 않게 종료되었습니다');
         };
 
         document.querySelector('#chat-message-input').focus();
@@ -32,11 +53,17 @@
         document.querySelector('#chat-message-submit').onclick = function(e) {
             const messageInputDom = document.querySelector('#chat-message-input');
             const message = messageInputDom.value;
+            if (message.trim() === '') return;  // 빈 메시지 방지
+
             chatSocket.send(JSON.stringify({
                 'message': message
             }));
-            document.querySelector('#chat-log').value += ('You: ' + message + '\n');
+            document.querySelector('#chat-log').value += ('당신: ' + message + '\n');
             messageInputDom.value = '';
+
+            // 스크롤을 항상 아래로 유지
+            const chatLog = document.querySelector('#chat-log');
+            chatLog.scrollTop = chatLog.scrollHeight;
         };
     </script>
 </body>

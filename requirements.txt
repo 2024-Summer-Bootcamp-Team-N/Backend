@@ -21,3 +21,4 @@ channels-redis
 daphne
 aiohttp
 django-cors-headers
+matplotlib
