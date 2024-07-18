@@ -1,0 +1,45 @@
+<!-- websocket_test.html -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h1>WebSocket Test</h1>
+    <textarea id="messages" cols="100" rows="20" readonly></textarea><br>
+    <input id="messageInput" type="text" size="100">
+    <button onclick="sendMessage()">Send</button>
+
+    <script>
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const wsPath = `${wsScheme}://${window.location.host}/ws/chat/`;
+        const socket = new WebSocket(wsPath);
+
+        socket.onopen = function(event) {
+            document.getElementById('messages').value += "WebSocket connected.\n";
+        };
+
+        socket.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById('messages').value += `Received: ${data.message}\n`;
+        };
+
+        socket.onclose = function(event) {
+            document.getElementById('messages').value += "WebSocket disconnected.\n";
+        };
+
+        socket.onerror = function(event) {
+            document.getElementById('messages').value += `WebSocket error: ${event.message}\n`;
+        };
+
+        function sendMessage() {
+            const message = document.getElementById('messageInput').value;
+            socket.send(JSON.stringify({'message': message}));
+            document.getElementById('messages').value += `Sent: ${message}\n`;
+            document.getElementById('messageInput').value = '';
+        }
+    </script>
+</body>
+</html>

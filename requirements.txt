@@ -15,3 +15,7 @@ celery>=5.0.0
 psycopg2-binary
 webdriver-manager
 requests
+openai
+channels
+channels-redis
+daphne
