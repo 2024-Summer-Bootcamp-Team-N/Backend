@@ -20,3 +20,4 @@ channels
 channels-redis
 daphne
 aiohttp
+django-cors-headers
