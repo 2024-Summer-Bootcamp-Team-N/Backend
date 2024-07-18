@@ -77,7 +77,7 @@ class URLGenerator(APIView):
                 params.append('isDuplex=true')
 
             url = base_url + "&".join(params)
-            url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=15'
+            url += f'&m_lat={region.latitude}&m_lng={region.longitude}&m_zoom=16'
 
             GeneratedURL.objects.create(url=url)
 

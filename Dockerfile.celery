@@ -1,12 +1,23 @@
+
 FROM python:3.9
 
 WORKDIR /app
 
 # 필요한 패키지 설치
-RUN apt-get update && apt-get install -y \
-    git \
-    default-libmysqlclient-dev \
-    build-essential \
+RUN apt-get update \
+    && apt-get install -y \
+       git \
+       default-libmysqlclient-dev \
+       build-essential \
+       wget \
+       unzip \
+       xvfb \
+       libxi6 \
+       libgconf-2-4 \
+       gnupg2 \
+       curl \
+       chromium \
+       chromium-driver \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
