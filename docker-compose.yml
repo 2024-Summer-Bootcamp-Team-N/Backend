@@ -16,6 +16,16 @@ services:
       - rabbitmq
       - redis
 
+  nginx:
+    image: nginx:latest
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./staticfiles:/app/staticfiles
+    depends_on:
+      - web
+
     # Redis 서비스
   redis:
     image: "redis:alpine"
