@@ -2,12 +2,13 @@ import json
 import asyncio
 from channels.generic.websocket import AsyncWebsocketConsumer
 from .chatgpt import get_chatgpt_response
+import aioredis
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_group_name = 'chat_room'
+        self.redis = await aioredis.from_url('redis://redis:6379', encoding='utf-8', decode_responses=True)
 
-        # Join room group
         await self.channel_layer.group_add(
             self.room_group_name,
             self.channel_name
@@ -16,11 +17,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.accept()
 
     async def disconnect(self, close_code):
-        # Leave room group
         await self.channel_layer.group_discard(
             self.room_group_name,
             self.channel_name
         )
+        await self.redis.close()
 
     async def receive(self, text_data):
         try:
@@ -29,6 +30,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             # ChatGPT API 호출
             response = await get_chatgpt_response(message)
+
+            # Redis에 채팅 내역 저장
+            await self.redis.set(f"chat:{message}", response)
 
             # 응답을 한 번에 전송
             await self.channel_layer.group_send(
