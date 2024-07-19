@@ -14,6 +14,13 @@ services:
       - PYTHONPATH=/app
     depends_on:
       - rabbitmq
+      - redis
+
+    # Redis 서비스
+  redis:
+    image: "redis:alpine"
+    ports:
+       - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:3-management
