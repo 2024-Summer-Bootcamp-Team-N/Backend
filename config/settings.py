@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'apps.options',
     'celery',
     'corsheaders', #연동 간 추가
+    'chat',
 ]
 
 MIDDLEWARE = [
@@ -180,8 +181,8 @@ LOGGING = {
     },
 }
 
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'UTC'
+LANGUAGE_CODE = 'ko-kr'
+TIME_ZONE = 'Asia/Seoul'
 USE_I18N = True
 USE_TZ = True
 
@@ -196,4 +197,4 @@ CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND', default='')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'UTC'
+CELERY_TIMEZONE = 'Asia/Seoul'

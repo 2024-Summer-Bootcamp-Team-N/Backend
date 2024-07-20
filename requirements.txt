@@ -16,3 +16,9 @@ psycopg2-binary
 webdriver-manager
 requests
 django-cors-headers
+openai
+channels
+channels-redis
+daphne
+aiohttp
+matplotlib
