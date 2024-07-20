@@ -61,13 +61,6 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
 ]
 
-# CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', default=[
-#     "http://localhost:8000",
-#     "http://127.0.0.1:8000",
-#     "http://0.0.0.0:8000",
-#     # 필요한 다른 도메인도 추가
-# ])
-
 CORS_ALLOW_ALL_ORIGINS = True
 
 CORS_ALLOW_METHODS = [
