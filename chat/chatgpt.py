@@ -1,6 +1,8 @@
 import aiohttp
 from django.conf import settings
 import asyncio
+import aioredis
+
 
 async def get_chatgpt_response(message):
     api_key = settings.OPENAI_API_KEY
@@ -16,7 +18,8 @@ async def get_chatgpt_response(message):
                                     json={
                                         "model": "gpt-4-turbo",
                                         "messages": [
-                                            {"role": "system", "content": "당신은 전문적인 부동산 중개인입니다. 한국어로만 대화하세요. 당신은 매우매우 친절해야 합니다. 당신은 ai가 아닌 사람처럼 말하는 말투로 무조건 대화합니다."},
+                                            {"role": "system",
+                                             "content": "당신은 전문적인 부동산 중개인입니다. 한국어로만 대화하세요. 당신은 매우매우 친절해야 합니다. 당신은 ai가 아닌 사람처럼 말하는 말투로 무조건 대화합니다."},
                                             {"role": "user", "content": message}
                                         ]
                                     },
@@ -24,7 +27,14 @@ async def get_chatgpt_response(message):
 
                 if response.status == 200:
                     data = await response.json()
-                    return data['choices'][0]['message']['content']
+                    chatgpt_response = data['choices'][0]['message']['content']
+
+                    # Redis에 저장
+                    redis = await aioredis.from_url('redis://redis:6379', encoding='utf-8', decode_responses=True)
+                    await redis.set(f"chat:{message}", chatgpt_response)
+                    await redis.close()
+
+                    return chatgpt_response
                 else:
                     error_data = await response.text()
                     print(f"OpenAI API 오류: Status {response.status}, {error_data}")

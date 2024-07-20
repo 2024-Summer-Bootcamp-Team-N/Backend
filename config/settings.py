@@ -24,6 +24,11 @@ ALLOWED_HOSTS = env.list('DJANGO_ALLOWED_HOSTS', default=['*','54.180.163.183'])
 
 # Application definition
 
+# Redis 설정 추가
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
+REDIS_DB = 0
+
 INSTALLED_APPS = [
     'channels',
     'django.contrib.admin',
@@ -105,8 +110,11 @@ ASGI_APPLICATION = 'config.asgi.application'
 
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer"
-    }
+        "BACKEND": "channels_redis.core.RedisChannelLayer",  # 변경
+        "CONFIG": {
+            "hosts": [('redis://redis:6379')],  # 변경
+        },
+    },
 }
 
 DATABASES = {
