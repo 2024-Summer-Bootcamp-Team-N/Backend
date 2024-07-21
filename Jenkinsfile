@@ -15,10 +15,8 @@ pipeline {
 
         stage('Copy .env') {
             steps {
-                // 비밀 텍스트를 워크스페이스에 복사
                 withCredentials([file(credentialsId: "${ENV_FILE}", variable: 'ENV_FILE_PATH')]) {
                     sh 'cp $ENV_FILE_PATH .env'
-                    // .env 파일이 올바르게 복사되었는지 확인
                     sh 'ls -la ${WORKSPACE}'
                 }
             }
@@ -50,7 +48,6 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    // .env 파일을 Docker Compose 빌드 명령에 포함시킵니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} build"
                 }
             }
@@ -65,11 +62,8 @@ pipeline {
             }
             steps {
                 script {
-                    // 기존의 모든 컨테이너를 중지하고 제거합니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} down"
-                    // 사용하지 않는 모든 자원을 정리합니다.
                     sh "docker system prune -f"
-                    // .env 파일을 Docker Compose 업 명령에 포함시킵니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
             }
@@ -83,7 +77,7 @@ pipeline {
         failure {
             script {
                 echo 'Build or deployment failed.'
-                sh 'docker logs testing-jenkins_develop-nginx-1' // Nginx 컨테이너 로그 확인
+                sh 'docker logs testing-jenkins_develop-nginx-1 || true'
             }
         }
     }
