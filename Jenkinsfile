@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        ENV_FILE = 'env-file' // Jenkins 관리 설정에서 추가한 비밀 텍스트 ID
+        ENV_FILE = '.env' // .env 파일의 경로 설정
     }
 
     stages {
@@ -51,8 +51,10 @@ pipeline {
             }
             steps {
                 script {
-                    // 기존의 컨테이너를 중지하고 제거합니다.
+                    // 기존의 모든 컨테이너를 중지하고 제거합니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} down"
+                    // 사용하지 않는 모든 자원을 정리합니다.
+                    sh "docker system prune -f"
                     // .env 파일을 Docker Compose 업 명령에 포함시킵니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
