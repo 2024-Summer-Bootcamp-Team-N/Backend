@@ -3,8 +3,7 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        ENV_FILE = 'env-file' // 크리덴셜 ID를 적절히 설정합니다.
-    }
+        ENV_FILE = 'env-file'
 
     stages {
         stage('Checkout') {
@@ -18,9 +17,16 @@ pipeline {
                 // 비밀 텍스트를 워크스페이스에 복사
                 withCredentials([file(credentialsId: "${ENV_FILE}", variable: 'ENV_FILE_PATH')]) {
                     sh 'cp $ENV_FILE_PATH .env'
-                    // 파일 목록 확인
+                    // .env 파일이 올바르게 복사되었는지 확인
                     sh 'ls -la ${WORKSPACE}'
                 }
+            }
+        }
+
+        stage('Verify nginx.conf') {
+            steps {
+                // nginx.conf 파일이 올바르게 있는지 확인
+                sh 'ls -la ${WORKSPACE}/nginx/nginx.conf'
             }
         }
 
