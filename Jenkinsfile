@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        ENV_FILE = '.env' // .env 파일의 경로 설정
+        ENV_FILE = 'env-file' // Jenkins 관리 설정에서 추가한 비밀 텍스트 ID
     }
 
     stages {
@@ -15,10 +15,12 @@ pipeline {
 
         stage('Copy .env') {
             steps {
-                // .env 파일을 Jenkins 작업 디렉토리로 복사합니다.
-                sh 'cp ${WORKSPACE}/.env .'
-                // 파일 목록 확인
-                sh 'ls -la ${WORKSPACE}'
+                // 비밀 텍스트를 워크스페이스에 복사
+                withCredentials([file(credentialsId: "${ENV_FILE}", variable: 'ENV_FILE_PATH')]) {
+                    sh 'cp $ENV_FILE_PATH .env'
+                    // 파일 목록 확인
+                    sh 'ls -la ${WORKSPACE}'
+                }
             }
         }
 
@@ -35,7 +37,7 @@ pipeline {
             steps {
                 script {
                     // .env 파일을 Docker Compose 빌드 명령에 포함시킵니다.
-                    sh "docker compose --env-file ${WORKSPACE}/${ENV_FILE} -f ${WORKSPACE}/${DOCKER_COMPOSE_FILE} build"
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} build"
                 }
             }
         }
@@ -50,7 +52,7 @@ pipeline {
             steps {
                 script {
                     // .env 파일을 Docker Compose 업 명령에 포함시킵니다.
-                    sh "docker compose --env-file ${WORKSPACE}/${ENV_FILE} -f ${WORKSPACE}/${DOCKER_COMPOSE_FILE} up -d"
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
             }
         }
