@@ -51,6 +51,8 @@ pipeline {
             }
             steps {
                 script {
+                    // 기존의 컨테이너를 중지하고 제거합니다.
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} down"
                     // .env 파일을 Docker Compose 업 명령에 포함시킵니다.
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
