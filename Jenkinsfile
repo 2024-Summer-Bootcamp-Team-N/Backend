@@ -71,8 +71,14 @@ pipeline {
             }
             steps {
                 script {
+                    // Stop and remove all existing containers
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} down"
                     sh "docker system prune -f"
+
+                    // Remove all existing containers
+                    sh "docker ps -aq | xargs docker rm -f || true"
+
+                    // Deploy new containers
                     sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
             }
