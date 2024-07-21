@@ -26,12 +26,15 @@ pipeline {
             steps {
                 script {
                     def nginxConfPath = "${WORKSPACE}/nginx/nginx.conf"
-                    def result = sh(script: "if [ -f ${nginxConfPath} ]; then echo 'File exists'; else echo 'File not found'; fi", returnStdout: true).trim()
-                    if (result == 'File not found') {
-                        error("nginx.conf file not found at ${nginxConfPath}")
-                    } else {
-                        echo "nginx.conf file found at ${nginxConfPath}"
-                    }
+                    sh """
+                    if [ -f ${nginxConfPath} ]; then
+                      echo 'File exists';
+                    else
+                      echo 'File not found';
+                      exit 1;
+                    fi
+                    file ${nginxConfPath}
+                    """
                 }
             }
         }
