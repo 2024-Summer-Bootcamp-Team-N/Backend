@@ -3,7 +3,8 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        ENV_FILE = 'env-file'
+        ENV_FILE = 'env-file' // 크리덴셜 ID를 적절히 설정합니다.
+    }
 
     stages {
         stage('Checkout') {
@@ -25,8 +26,15 @@ pipeline {
 
         stage('Verify nginx.conf') {
             steps {
-                // nginx.conf 파일이 올바르게 있는지 확인
-                sh 'ls -la ${WORKSPACE}/nginx/nginx.conf'
+                script {
+                    def nginxConfPath = "${WORKSPACE}/nginx/nginx.conf"
+                    def result = sh(script: "if [ -f ${nginxConfPath} ]; then echo 'File exists'; else echo 'File not found'; fi", returnStdout: true).trim()
+                    if (result == 'File not found') {
+                        error("nginx.conf file not found at ${nginxConfPath}")
+                    } else {
+                        echo "nginx.conf file found at ${nginxConfPath}"
+                    }
+                }
             }
         }
 
@@ -73,7 +81,10 @@ pipeline {
             echo 'Build and deployment successful!'
         }
         failure {
-            echo 'Build or deployment failed.'
+            script {
+                echo 'Build or deployment failed.'
+                sh 'docker logs testing-jenkins_develop-nginx-1' // Nginx 컨테이너 로그 확인
+            }
         }
     }
 }
