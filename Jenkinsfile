@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-        ENV_FILE = 'env-file' // 크리덴셜 ID를 적절히 설정합니다.
+        ENV_FILE = 'env-file'
     }
 
     stages {
