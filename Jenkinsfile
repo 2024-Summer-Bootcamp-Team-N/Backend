@@ -22,6 +22,12 @@ pipeline {
             }
         }
 
+        stage('Install file command') {
+            steps {
+                sh 'apt-get update && apt-get install -y file'
+            }
+        }
+
         stage('Verify nginx.conf') {
             steps {
                 script {
