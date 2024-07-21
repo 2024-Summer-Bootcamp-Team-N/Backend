@@ -1,3 +1,5 @@
+version: '3.7'
+
 services:
   web:
     build: .
@@ -21,13 +23,23 @@ services:
     image: nginx:latest
     ports:
       - "80:80"
+      - "443:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf
       - ./staticfiles:/app/staticfiles
+      - /var/www/certbot:/var/www/certbot
     depends_on:
       - web
 
-    # Redis 서비스
+  certbot:
+    image: certbot/certbot
+    volumes:
+      - /var/www/certbot:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
+    command: certonly --webroot --webroot-path=/var/www/certbot --email mjj7343@gmail.com --agree-tos --no-eff-email -d houseadvisor.site
+    depends_on:
+      - nginx
+
   redis:
     image: "redis:alpine"
     ports:
