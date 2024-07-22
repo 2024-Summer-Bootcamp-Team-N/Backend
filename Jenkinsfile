@@ -2,33 +2,46 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_COMPOSE_FILE= 'docker-compose.yml'
-        DJANGO_SECRET_KEY="${env.DJANGO_SECRET_KEY}"
-        DJANGO_DEBUG="${env.DJANGO_DEBUG}"
-        KAKAO_MAP_API_KEY="${env.KAKAO_MAP_API_KEY}"
-        ALLOWED_HOSTS="${env.ALLOWED_HOSTS}"
-        DB_NAME="${env.DB_NAME}"
-        DB_USER="${env.DB_USER}"
-        DB_PASSWORD="${env.DB_PASSWORD}"
-        DB_HOST="${env.DB_HOST}"
-        DB_PORT="${env.DB_PORT}"
-        KAKAO_AK="${env.KAKAO_AK}"
-        CELERY_BROKER_URL="${env.CELERY_BROKER_URL}"
-        CELERY_RESULT_BACKEND="${env.CELERY_RESULT_BACKEND}"
-        DJANGO_SETTINGS_MODULE="${env.DJANGO_SETTINGS_MODULE}"
-        RABBITMQ_USER="${env.RABBITMQ_USER}"
-        RABBITMQ_PASSWORD="${env.RABBITMQ_PASSWORD}"
-        DISABLE_BLINK_FEATURES="${env.DISABLE_BLINK_FEATURES}"
-        EXCLUDE_SWITCHES="${env.EXCLUDE_SWITCHES}"
-        USE_AUTOMATION_EXTENSION="${env.USE_AUTOMATION_EXTENSION}"
-        USER_AGENT="${env.USER_AGENT}"
-        OPENAI_API_KEY="${env.OPENAI_API_KEY}"
+        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+        ENV_FILE = 'env-file'
     }
 
     stages {
         stage('Checkout') {
             steps {
                 git branch: 'develop', url: 'https://github.com/2024-Summer-Bootcamp-Team-N/Backend.git'
+            }
+        }
+
+        stage('Copy .env') {
+            steps {
+                withCredentials([file(credentialsId: "${ENV_FILE}", variable: 'ENV_FILE_PATH')]) {
+                    sh 'cp $ENV_FILE_PATH .env'
+                    sh 'ls -la ${WORKSPACE}'
+                }
+            }
+        }
+
+        stage('Install file command') {
+            steps {
+                sh 'apt-get update && apt-get install -y file'
+            }
+        }
+
+        stage('Verify nginx.conf') {
+            steps {
+                script {
+                    def nginxConfPath = "${WORKSPACE}/nginx/nginx.conf"
+                    sh """
+                    if [ -f ${nginxConfPath} ]; then
+                      echo 'File exists';
+                    else
+                      echo 'File not found';
+                      exit 1;
+                    fi
+                    file ${nginxConfPath}
+                    """
+                }
             }
         }
 
@@ -44,7 +57,7 @@ pipeline {
         stage('Build') {
             steps {
                 script {
-                    sh "docker compose -f ${DOCKER_COMPOSE_FILE} build"
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} build"
                 }
             }
         }
@@ -58,7 +71,15 @@ pipeline {
             }
             steps {
                 script {
-                    sh "docker compose -f ${DOCKER_COMPOSE_FILE} up -d"
+                    // Stop and remove all existing containers
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} down"
+                    sh "docker system prune -f"
+
+                    // Remove all existing containers
+                    sh "docker ps -aq | xargs docker rm -f || true"
+
+                    // Deploy new containers
+                    sh "docker compose --env-file .env -f ${DOCKER_COMPOSE_FILE} up -d"
                 }
             }
         }
@@ -69,7 +90,10 @@ pipeline {
             echo 'Build and deployment successful!'
         }
         failure {
-            echo 'Build or deployment failed.'
+            script {
+                echo 'Build or deployment failed.'
+                sh 'docker logs testing-jenkins_develop-nginx-1 || true'
+            }
         }
     }
 }
