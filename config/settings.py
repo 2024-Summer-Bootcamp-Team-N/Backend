@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'requests',
     'drf_yasg',
     'rest_framework_simplejwt.token_blacklist',
+    'apps.contracts',
     'apps.users',
     'apps.entry',
     'apps.info',
@@ -215,3 +216,9 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Asia/Seoul'
+
+# s3 설정
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME')

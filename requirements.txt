@@ -23,3 +23,5 @@ aiohttp
 django-cors-headers
 matplotlib
 aioredis
+boto3
+django-storages

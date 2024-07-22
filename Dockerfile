@@ -36,4 +36,5 @@ RUN mkdir -p /var/log && touch /var/log/django.log /var/log/daphne.log /var/log/
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Supervisord 실행
-CMD ["supervisord", "-c", "/app/supervisord.conf"]
+#CMD ["supervisord", "-c", "/app/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
