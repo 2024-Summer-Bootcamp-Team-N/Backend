@@ -1,7 +1,14 @@
 import boto3
-from rest_framework.parsers import MultiPartParser, FormParser
 import uuid
+import botocore
+import mimetypes
 import re
+import os
+import io
+import base64
+
+from rest_framework.parsers import JSONParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -11,6 +18,8 @@ from drf_yasg import openapi
 from rest_framework_simplejwt.token_blacklist.models import OutstandingToken
 from ..options.models import RoomInfo, RoomDetailInfo
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
+from io import BytesIO
 
 User = get_user_model()
 
@@ -106,7 +115,7 @@ class LatestRoomDetailInfoAPIView(APIView):
 
 #계약서 이미지 s3에 업로드
 class S3ImageUploadView(APIView):
-    parser_classes = (MultiPartParser, FormParser)
+    parser_classes = (JSONParser,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -115,16 +124,16 @@ class S3ImageUploadView(APIView):
                                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY)
 
     @swagger_auto_schema(
-        operation_description="Upload an image to S3",
-        manual_parameters=[
-            openapi.Parameter(
-                name="image",
-                in_=openapi.IN_FORM,
-                type=openapi.TYPE_FILE,
-                required=True,
-                description="Image file to upload"
-            ),
-        ],
+        operation_description="Upload an image to S3 (image data in request body)",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'image_data': openapi.Schema(type=openapi.TYPE_STRING, description='Image data (base64 encoded)'),
+                'file_name': openapi.Schema(type=openapi.TYPE_STRING, description='Original file name'),
+                'content_type': openapi.Schema(type=openapi.TYPE_STRING, description='MIME type of the image')
+            },
+            required=['image_data', 'file_name', 'content_type']
+        ),
         responses={
             201: openapi.Response(
                 description="Created",
@@ -136,39 +145,80 @@ class S3ImageUploadView(APIView):
                 )
             ),
             400: 'Bad Request',
+            404: 'Not Found',
             500: 'Internal Server Error'
         }
     )
     def post(self, request):
         try:
-            if 'image' not in request.FILES:
-                return Response({'error': 'Image file not provided'}, status=status.HTTP_400_BAD_REQUEST)
+            image_data = request.data.get('image_data')
+            file_name = request.data.get('file_name')
+            content_type = request.data.get('content_type')
 
-            image_file = request.FILES['image']
+            if not all([image_data, file_name, content_type]):
+                return Response({'error': '이미지 데이터, 파일 이름, 콘텐츠 타입이 모두 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Base64 디코딩
+            image_data = base64.b64decode(image_data)
 
             # 파일 크기 검증 (예: 10MB 제한)
-            if image_file.size > 10 * 1024 * 1024:
-                return Response({'error': 'File size exceeds 10MB'}, status=status.HTTP_400_BAD_REQUEST)
+            if len(image_data) > 10 * 1024 * 1024:
+                return Response({'error': '파일 크기가 10MB를 초과합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 파일 타입 검증 (예: 이미지 파일만 허용)
-            allowed_types = ['image/jpeg', 'image/png', 'image/gif']
-            if image_file.content_type not in allowed_types:
-                return Response({'error': 'Invalid file type'}, status=status.HTTP_400_BAD_REQUEST)
+            # 파일 타입 검증
+            allowed_mime_types = ['image/jpeg', 'image/png']
+            if content_type not in allowed_mime_types:
+                return Response({'error': '유효하지 않은 파일 형식입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # Generate a unique filename using UUID
-            file_name = f"images/{uuid.uuid4().hex}_{image_file.name}"
+            # 가장 최근 사용자 정보 가져오기
+            latest_token = OutstandingToken.objects.order_by('-created_at').first()
 
-            self.s3.upload_fileobj(image_file, settings.AWS_STORAGE_BUCKET_NAME, file_name)
+            if not latest_token:
+                return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
+            user_id = latest_token.user_id  # 사용자 ID 가져오기
+
+            # 파일 이름 생성 (사용자 ID + "_contract")
+            base_file_name = f"images/{user_id}_contract"
+
+            # 파일 이름 중복 검사 및 번호 추가
+            file_name = base_file_name
+            counter = 1
+            while True:
+                try:
+                    self.s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_name)
+                except botocore.exceptions.ClientError as e:
+                    if e.response['Error']['Code'] == '404':
+                        break  # 파일 없음, 루프 종료
+                    else:
+                        raise  # 다른 에러 발생, 예외 발생
+
+                file_name = f"{base_file_name}_{counter}"
+                counter += 1
+
+            # 파일 확장자 추가
+            file_extension = mimetypes.guess_extension(content_type)
+            file_name += file_extension
+
+            # S3에 파일 업로드
+            self.s3.upload_fileobj(
+                io.BytesIO(image_data),
+                settings.AWS_STORAGE_BUCKET_NAME,
+                file_name,
+                ExtraArgs={'ContentType': content_type}
+            )
+
+            # 이미지 URL 생성
             image_url = self.s3.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': file_name},
-                ExpiresIn=3600)  # URL 유효 시간 (1시간)
+                ExpiresIn=3600
+            )
 
             return Response({'image_url': image_url}, status=status.HTTP_201_CREATED)
 
         except boto3.exceptions.S3UploadFailedError as e:
-            return Response({'error': 'Failed to upload image to S3'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': 'S3 업로드에 실패했습니다.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -189,12 +239,27 @@ class S3ImageListView(APIView):
                     )
                 )
             ),
+            status.HTTP_404_NOT_FOUND: openapi.Response(
+                description="이미지를 찾을 수 없음",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+                )
+            ),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
                 description="Error occurred while fetching images"
-            )  # Simplified error response
+            )
         }
     )
     def get(self, request):
+        # 가장 최근 사용자 정보 가져오기
+        latest_token = OutstandingToken.objects.order_by('-created_at').first()
+
+        if not latest_token:
+            return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        user_id = latest_token.user_id  # 사용자 ID 가져오기
+
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -202,24 +267,32 @@ class S3ImageListView(APIView):
         )
 
         try:
-            paginator = s3.get_paginator('list_objects_v2')
-            pages = paginator.paginate(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+            # 사용자 ID로 파일 이름 패턴 생성
+            file_name_pattern = f"images/{user_id}_contract"
+
+            # S3에서 파일 목록 가져오기
+            response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=file_name_pattern)
 
             image_data = []
 
-            for page in pages:
-                for obj in page.get('Contents', []):
-                    if obj['Key'].endswith(('.jpg', '.jpeg', '.png', '.gif')):
+            if 'Contents' in response:  # 파일이 존재하는 경우
+                for obj in response['Contents']:
+                    file_name, file_extension = os.path.splitext(obj['Key'])  # os.path.splitext 사용
+                    if file_extension in ('.jpg', '.jpeg', '.png', '.gif'):
                         presigned_url = s3.generate_presigned_url(
-                            'get_object',
-                            Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
-                            ExpiresIn=3600  # 1 hour expiration
-                        )
+                        'get_object',
+                        Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
+                        ExpiresIn=3600  # 1 hour expiration
+                    )
 
-                        image_data.append({'name': obj['Key'], 'url': presigned_url})
+                    # 이미지 URL에 파일 확장자를 포함하여 반환
+                    image_url = f"{presigned_url.split('?')[0]}"
+                    image_data.append({'name': f"{file_name}", 'url': image_url})
+            else:  # 파일이 존재하지 않는 경우
+                return Response({"error": "해당 사용자의 이미지를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-            return Response(image_data, status=status.HTTP_200_OK)
+            return Response(image_data, status=status.HTTP_200_OK)  # JSON 응답으로 반환
 
         except Exception as e:
-            error_message = {"error": f"Error fetching S3 images: {str(e)}"}  # Include exception details
+            error_message = {"error": f"Error fetching S3 images: {str(e)}"}
             return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
