@@ -25,9 +25,6 @@ RUN pip install --upgrade pip && pip install -r requirements.txt && pip install 
 # 애플리케이션 파일 복사
 COPY . .
 
-# 정적 파일 수집
-RUN python3.9 manage.py collectstatic --noinput
-
 # 권한 설정
 RUN mkdir -p /var/log && touch /var/log/django.log /var/log/daphne.log /var/log/django.err /var/log/daphne.err && \
     chown -R myuser:myuser /app /var/log/django.log /var/log/daphne.log /var/log/django.err /var/log/daphne.err
