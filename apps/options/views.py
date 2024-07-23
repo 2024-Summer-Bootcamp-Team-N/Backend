@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 import logging
 import time
 import environ
@@ -161,6 +162,29 @@ def find_element_text(driver, header_text):
         logger.error(f"Error finding info element with header '{header_text}': {str(e)}")
         return '-'
 
+def extract_image_url(driver):
+    # 배경 이미지 URL을 저장할 변수
+    background_image_urls = []
+
+    try:
+        # 이미지가 로드될 때까지 대기 (최대 10초)
+        image_element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.styled__LayoutContainer-ialnoa-0"))
+        )
+
+        # 이미지 요소 내에서 실제 이미지 URL 찾기
+        img_elements = image_element.find_elements(By.CSS_SELECTOR, "*")
+        for sbuhg_element in img_elements:
+            background_image = sbuhg_element.value_of_css_property("background-image")
+            urls = re.findall(r'url\("(.+?)"\)', background_image)
+            if urls:
+                background_image_urls.extend(urls)
+
+    except (NoSuchElementException, TimeoutException):
+        pass  # 이미지를 찾지 못하거나 타임아웃 시 빈 리스트 유지
+
+    return background_image_urls  # 배경 이미지 URL 리스트 반환
+
 class DetailedRoomInfoView(APIView):
     def get(self, request, room_id=None, *args, **kwargs):
         try:
@@ -211,6 +235,7 @@ class DetailedRoomInfoView(APIView):
                 move_in_date_text = find_element_text(driver, '입주가능일')
                 approval_date_text = find_element_text(driver, '사용승인일')
                 initial_registration_date_text = find_element_text(driver, '최초등록일')
+                image_url = extract_image_url(driver)
 
                 # RoomDetailInfo 모델에 저장
                 room_detail, created = RoomDetailInfo.objects.update_or_create(
@@ -230,6 +255,7 @@ class DetailedRoomInfoView(APIView):
                         'move_in_date': move_in_date_text,
                         'approval_date': approval_date_text,
                         'initial_registration_date': initial_registration_date_text,
+                        'image_url': ','.join(image_url),
                     }
                 )
 
