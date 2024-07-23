@@ -52,7 +52,7 @@ pipeline {
         stage('Building our image') {
             steps {
                 script {
-                    sh "docker build --memory=2g -t ${repository}:${IMAGE_TAG} ." // 메모리 사용을 2GB로 제한
+                    sh "docker build --memory=2g -t ${repository}:${IMAGE_TAG} -f Dockerfile-dev ." // 메모리 사용을 2GB로 제한
                 }
                 slackSend message: "Build Started - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
             }
