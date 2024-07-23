@@ -1,3 +1,5 @@
+version: '3.7'
+
 services:
   web:
     build:
@@ -55,14 +57,13 @@ services:
       - rabbitmq
 
   nginx:
-    image: nginx:latest
+    build:
+      context: ./nginx
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./staticfiles:/app/staticfiles
       - ./letsencrypt:/var/www/certbot
+      - ./staticfiles:/app/staticfiles
     ports:
       - "80:80"
-      - "443:443"
     depends_on:
       - web
       - daphne
@@ -73,7 +74,7 @@ services:
     volumes:
       - ./letsencrypt:/etc/letsencrypt
       - ./letsencrypt:/var/www/certbot
-    command: certonly --webroot --webroot-path=/var/www/certbot --email mocodoco@naver.com --agree-tos --no-eff-email -d houseadvisor.site
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     depends_on:
       - nginx
 
@@ -97,3 +98,7 @@ services:
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/advanced.config:/etc/rabbitmq/advanced.config
+
+networks:
+  app-network:
+    driver: bridge
