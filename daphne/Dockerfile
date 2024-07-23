@@ -8,7 +8,6 @@ RUN apt-get update && apt-get install -y \
     default-libmysqlclient-dev \
     build-essential \
     pkg-config \
-    supervisor \
     chromium \
     chromium-driver \
     redis-tools && \
@@ -19,19 +18,14 @@ RUN apt-get update && apt-get install -y \
 RUN groupadd -r myuser && useradd -r -g myuser myuser
 
 # requirements.txt 파일 복사 및 종속성 설치
-COPY requirements.txt ./
+COPY requirements.txt ./requirements.txt
 RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery python-dotenv
 
 # 애플리케이션 파일 복사
-COPY . .
+COPY .. .
 
 # 권한 설정
-RUN mkdir -p /var/log && touch /var/log/django.log /var/log/daphne.log /var/log/django.err /var/log/daphne.err && \
-    chown -R myuser:myuser /app /var/log/django.log /var/log/daphne.log /var/log/django.err /var/log/daphne.err
+RUN chown -R myuser:myuser /app
 
-# Supervisord 설정 파일 복사
-COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
-
-# Supervisord 실행
-#CMD ["supervisord", "-c", "/app/supervisord.conf"]
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+# Daphne 실행
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "config.asgi:application"]
