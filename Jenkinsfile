@@ -2,7 +2,8 @@ pipeline {
     agent any
 
     environment {
-        repository = "legit0302/be" // Docker Hub ID와 repository 이름
+        backend_repo = "legit0302/be" // Docker Hub ID와 repository 이름
+        nginx_repo = "legit0302/nginx"
         DOCKERHUB_CREDENTIALS = credentials('docker-hub') // Jenkins에 등록해 놓은 Docker Hub credentials 이름
         IMAGE_TAG = "" // Docker image tag
         DOCKER_COMPOSE_FILE = 'docker-compose.yml'
