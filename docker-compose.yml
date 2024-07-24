@@ -74,8 +74,10 @@ services:
     image: certbot/certbot
     user: root
     volumes:
-      - /etc/letsencrypt:/etc/letsencrypt
-      - /var/www/certbot:/var/www/certbot
+      - ./letsencrypt:/etc/letsencrypt
+      - ./letsencrypt:/var/lib/letsencrypt
+      - ./letsencrypt:/var/www/certbot
+      - ./letsencrypt/logs:/var/log/letsencrypt
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     depends_on:
       - nginx
@@ -102,7 +104,7 @@ services:
       - ./rabbitmq/advanced.config:/etc/rabbitmq/advanced.config
 
   frontend:
-    image: legit0302/fe:1.0.4
+    image: legit0302/fe:1.0.5
     container_name: frontend
     ports:
       - "5173:5173"
