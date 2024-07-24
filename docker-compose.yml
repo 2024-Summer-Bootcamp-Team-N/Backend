@@ -18,6 +18,8 @@ services:
     depends_on:
       - rabbitmq
       - redis
+    networks:
+      - app-network
 
   daphne:
     build:
@@ -36,6 +38,8 @@ services:
     depends_on:
       - rabbitmq
       - redis
+    networks:
+      - app-network
 
   celery:
     build:
@@ -55,6 +59,8 @@ services:
       - PYTHONPATH=/app
     depends_on:
       - rabbitmq
+    networks:
+      - app-network
 
   nginx:
     image: nginx:latest
@@ -69,6 +75,8 @@ services:
       - web
       - daphne
       - frontend
+    networks:
+      - app-network
 
   certbot:
     image: certbot/certbot
@@ -81,11 +89,15 @@ services:
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     depends_on:
       - nginx
+    networks:
+      - app-network
 
   redis:
     image: "redis:alpine"
     ports:
       - "6379:6379"
+    networks:
+      - app-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -102,6 +114,8 @@ services:
       - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
       - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json
       - ./rabbitmq/advanced.config:/etc/rabbitmq/advanced.config
+    networks:
+      - app-network
 
   frontend:
     image: legit0302/fe:1.0.5
@@ -110,3 +124,9 @@ services:
       - "5173:5173"
     command: yarn dev --host
     restart: always
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
