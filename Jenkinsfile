@@ -52,7 +52,7 @@ pipeline {
         stage('Building our image') {
             steps {
                 script {
-                    sh "docker build --memory=2g -t ${repository}:${IMAGE_TAG} -f Dockerfile-dev ." // 메모리 사용을 2GB로 제한
+                    sh "docker build --memory=2g -t ${backend_repository}:${IMAGE_TAG} -f Dockerfile-dev ." // 메모리 사용을 2GB로 제한
                 }
                 slackSend message: "Build Started - ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|Open>)"
             }
@@ -67,14 +67,14 @@ pipeline {
         stage('Deploy our image') {
             steps {
                 script {
-                    sh "docker push ${repository}:${IMAGE_TAG}" // docker push
+                    sh "docker push ${backend_repository}:${IMAGE_TAG}" // docker push
                 }
             }
         }
 
         stage('Cleaning up') {
             steps {
-                sh "docker rmi ${repository}:${IMAGE_TAG}" // docker image 제거
+                sh "docker rmi ${backend_repository}:${IMAGE_TAG}" // docker image 제거
             }
         }
     }
