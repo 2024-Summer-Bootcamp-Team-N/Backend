@@ -20,7 +20,7 @@ schema_view = get_schema_view(
 )
 
 application = ProtocolTypeRouter({
-    # (http->django views is added by default)
+    'http': get_asgi_application(),
     'websocket': AuthMiddlewareStack(
         URLRouter(
             websocket_urlpatterns
@@ -39,4 +39,3 @@ urlpatterns = [
     path('redoc/', schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
     path('websocket-test/', TemplateView.as_view(template_name="websocket_test.html")),
 ]
-
