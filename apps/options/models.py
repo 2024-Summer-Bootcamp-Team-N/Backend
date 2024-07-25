@@ -24,3 +24,4 @@ class RoomDetailInfo(models.Model):
     approval_date = models.TextField()
     initial_registration_date = models.TextField()
     image_url = models.URLField()
+    price = models.TextField()

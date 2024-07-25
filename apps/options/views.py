@@ -1,3 +1,4 @@
+
 import re
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -72,7 +73,7 @@ class GenerateAndCrawlView(APIView):
 
                 while True:
                     # 특정 요소가 로드될 때까지 대기
-                    WebDriverWait(driver, 10).until(
+                    WebDriverWait(driver, 0.1).until(
                         EC.presence_of_element_located((By.CLASS_NAME, "styled__Price-sc-1lx6b5d-4"))
                     )
                     logger.info("필수 요소 로드 완료")
@@ -96,7 +97,7 @@ class GenerateAndCrawlView(APIView):
                     # 다음 페이지 버튼 클릭하기
                     try:
                         # 현재 페이지 버튼 찾기
-                        current_page_button = WebDriverWait(driver, 10).until(
+                        current_page_button = WebDriverWait(driver, 0.1).until(
                             EC.presence_of_element_located((By.CLASS_NAME, "styled__PageBtn-d24fjp-2.cbZgbl"))
                         )
 
@@ -146,7 +147,7 @@ from selenium.webdriver.common.by import By
 def find_element_text(driver, header_text):
     try:
         # 요소가 로드될 때까지 기다리기
-        wait = WebDriverWait(driver, 10)
+        wait = WebDriverWait(driver, 0.1)
         element = wait.until(EC.presence_of_element_located((By.XPATH, f"//section[@data-scroll-spy-element='info']//li[div[@class='styled__ListHeader-ialnoa-6 jJKkgc']/h1[text()='{header_text}']]/div[@class='styled__ListContent-ialnoa-7 iMduqg']/p")))
 
         # 전체 텍스트 가져오기
@@ -168,7 +169,7 @@ def extract_image_url(driver):
 
     try:
         # 이미지가 로드될 때까지 대기 (최대 10초)
-        image_element = WebDriverWait(driver, 10).until(
+        image_element = WebDriverWait(driver, 0.1).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.styled__LayoutContainer-ialnoa-0"))
         )
 
@@ -194,7 +195,7 @@ class DetailedRoomInfoView(APIView):
             driver = setup_driver()
             try:
                 driver.get(link)
-                WebDriverWait(driver, 10).until(
+                WebDriverWait(driver, 0.1).until(
                     EC.presence_of_element_located((By.CLASS_NAME, "styled__SubInfo-sc-1h4thfr-18"))
                 )
 
@@ -223,6 +224,14 @@ class DetailedRoomInfoView(APIView):
                     logger.error(f"Error finding parking availability: {str(e)}")
                     parking_availability_text = '-'
 
+                try:
+                    price_element = driver.find_element(By.XPATH, "//p[@class='styled__Price-sc-1h4thfr-14 duqqZA']")
+                    price_text = price_element.text if price_element else '-'
+                except Exception as e:
+                    logger.error(f"Error finding price element: {str(e)}")
+                    price_text = '-'
+
+
                 # 크롤링할 항목들
                 room_type_text = find_element_text(driver, '방종류')
                 exclusive_overall_area_text = find_element_text(driver, '전용/공급면적')
@@ -236,6 +245,7 @@ class DetailedRoomInfoView(APIView):
                 approval_date_text = find_element_text(driver, '사용승인일')
                 initial_registration_date_text = find_element_text(driver, '최초등록일')
                 image_url = extract_image_url(driver)
+
 
                 # RoomDetailInfo 모델에 저장
                 room_detail, created = RoomDetailInfo.objects.update_or_create(
@@ -256,6 +266,7 @@ class DetailedRoomInfoView(APIView):
                         'approval_date': approval_date_text,
                         'initial_registration_date': initial_registration_date_text,
                         'image_url': ','.join(image_url),
+                        'price': price_text,
                     }
                 )
 
