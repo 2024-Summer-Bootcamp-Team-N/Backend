@@ -1,46 +1,50 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>부동산 중개인 챗봇</title>
-    <meta charset="UTF-8">
+    <title>부동산 상담 채팅</title>
+    <style>
+        #chat-log {
+            width: 100%;
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        .message {
+            margin-bottom: 10px;
+        }
+        .user-message {
+            color: blue;
+        }
+        .bot-message {
+            color: green;
+        }
+    </style>
 </head>
 <body>
-    <textarea id="chat-log" cols="100" rows="20" readonly></textarea><br>
+    <h1>부동산 상담 채팅</h1>
+    <div id="chat-log"></div>
     <input id="chat-message-input" type="text" size="100"><br>
-    <input id="chat-message-submit" type="button" value="전송">
+    <input id="chat-message-submit" type="button" value="Send">
 
     <script>
         const chatSocket = new WebSocket(
             'ws://' + window.location.host + '/ws/chat/'
         );
 
-        let isReceivingResponse = false;
-
-        chatSocket.onmessage = async function(e) {
+        chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             const chatLog = document.querySelector('#chat-log');
-
-            if (!isReceivingResponse) {
-                chatLog.value += '집피티: ';
-                isReceivingResponse = true;
-            }
-
-            // 응답을 한 글자씩 추가하는 함수
-            const addCharsToChatLog = async (message) => {
-                for (let i = 0; i < message.length; i++) {
-                    chatLog.value += message[i];
-                    chatLog.scrollTop = chatLog.scrollHeight;
-                    await new Promise(resolve => setTimeout(resolve, 50)); // 50ms 지연
-                }
-                chatLog.value += '\n';
-                isReceivingResponse = false;
-            };
-
-            await addCharsToChatLog(data.message);
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', 'bot-message');
+            messageElement.textContent = 'Bot: ' + data.message;
+            chatLog.appendChild(messageElement);
+            chatLog.scrollTop = chatLog.scrollHeight;
         };
 
         chatSocket.onclose = function(e) {
-            console.error('채팅 연결이 예기치 않게 종료되었습니다');
+            console.error('Chat socket closed unexpectedly');
         };
 
         document.querySelector('#chat-message-input').focus();
@@ -53,16 +57,19 @@
         document.querySelector('#chat-message-submit').onclick = function(e) {
             const messageInputDom = document.querySelector('#chat-message-input');
             const message = messageInputDom.value;
-            if (message.trim() === '') return;  // 빈 메시지 방지
+            if (message.trim() === '') return;  // 빈 메시지 무시
+
+            // 사용자 메시지 추가
+            const chatLog = document.querySelector('#chat-log');
+            const userMessageElement = document.createElement('div');
+            userMessageElement.classList.add('message', 'user-message');
+            userMessageElement.textContent = 'You: ' + message;
+            chatLog.appendChild(userMessageElement);
 
             chatSocket.send(JSON.stringify({
                 'message': message
             }));
-            document.querySelector('#chat-log').value += ('당신: ' + message + '\n');
             messageInputDom.value = '';
-
-            // 스크롤을 항상 아래로 유지
-            const chatLog = document.querySelector('#chat-log');
             chatLog.scrollTop = chatLog.scrollHeight;
         };
     </script>

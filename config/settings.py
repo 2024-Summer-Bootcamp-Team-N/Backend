@@ -1,10 +1,14 @@
 import os
+import sys
 from pathlib import Path
 import environ
 from datetime import timedelta
 
 # 경로는 다음과 같이 빌드: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Python 경로에 'apps' 폴더 추가
+sys.path.append(str(BASE_DIR / 'apps'))
 
 env = environ.Env()
 
@@ -115,12 +119,18 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 ASGI_APPLICATION = 'config.asgi.application'
 
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels_redis.core.RedisChannelLayer",  # 변경
+#         "CONFIG": {
+#             "hosts": [('redis://redis:6379')],  # 변경
+#         },
+#     },
+# }
+
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",  # 변경
-        "CONFIG": {
-            "hosts": [('redis://redis:6379')],  # 변경
-        },
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
     },
 }
 
