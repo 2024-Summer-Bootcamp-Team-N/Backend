@@ -6,6 +6,8 @@ import re
 import os
 import io
 import base64
+import datetime
+import pytz
 
 from django.utils import timezone
 from rest_framework.parsers import JSONParser
@@ -210,43 +212,112 @@ class S3ImageUploadView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+# class S3ImageListView(APIView):
+#     @swagger_auto_schema(
+#         responses={
+#             status.HTTP_200_OK: openapi.Response(
+#                 description="List of S3 image URLs",
+#                 schema=openapi.Schema(
+#                     type=openapi.TYPE_ARRAY,
+#                     items=openapi.Schema(
+#                         type=openapi.TYPE_OBJECT,
+#                         properties={
+#                             'name': openapi.Schema(type=openapi.TYPE_STRING),
+#                             'url': openapi.Schema(type=openapi.TYPE_STRING)
+#                         }
+#                     )
+#                 )
+#             ),
+#             status.HTTP_404_NOT_FOUND: openapi.Response(
+#                 description="이미지를 찾을 수 없음",
+#                 schema=openapi.Schema(
+#                     type=openapi.TYPE_OBJECT,
+#                     properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+#                 )
+#             ),
+#             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
+#                 description="Error occurred while fetching images"
+#             )
+#         }
+#     )
+#     def get(self, request):
+#         # 가장 최근 사용자 정보 가져오기
+#         latest_token = OutstandingToken.objects.order_by('-created_at').first()
+#
+#         if not latest_token:
+#             return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+#
+#         user_id = latest_token.user_id  # 사용자 ID 가져오기
+#
+#         s3 = boto3.client(
+#             's3',
+#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+#         )
+#
+#         try:
+#             # 사용자 ID로 파일 이름 패턴 생성
+#             file_name_pattern = f"images/{user_id}_contract"
+#
+#             # S3에서 파일 목록 가져오기
+#             response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=file_name_pattern)
+#
+#             image_data = []
+#
+#             if 'Contents' in response:  # 파일이 존재하는 경우
+#                 for obj in response['Contents']:
+#                     file_name, file_extension = os.path.splitext(obj['Key'])  # os.path.splitext 사용
+#                     if file_extension in ('.jpg', '.jpeg', '.png', '.gif'):
+#                         presigned_url = s3.generate_presigned_url(
+#                         'get_object',
+#                         Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
+#                         ExpiresIn=3600  # 1 hour expiration
+#                     )
+#
+#                     # 이미지 URL에 파일 확장자를 포함하여 반환
+#                     image_url = f"{presigned_url.split('?')[0]}"
+#                     image_data.append({'name': f"{file_name}", 'url': image_url})
+#             else:  # 파일이 존재하지 않는 경우
+#                 return Response({"error": "해당 사용자의 이미지를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+#
+#             return Response(image_data, status=status.HTTP_200_OK)  # JSON 응답으로 반환
+#
+#         except Exception as e:
+#             error_message = {"error": f"Error fetching S3 images: {str(e)}"}
+#             return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class S3ImageListView(APIView):
     @swagger_auto_schema(
         responses={
             status.HTTP_200_OK: openapi.Response(
-                description="List of S3 image URLs",
+                description="S3 이미지 URL 목록 (createdDate 포함)",
                 schema=openapi.Schema(
                     type=openapi.TYPE_ARRAY,
                     items=openapi.Schema(
                         type=openapi.TYPE_OBJECT,
                         properties={
-                            'name': openapi.Schema(type=openapi.TYPE_STRING),
-                            'url': openapi.Schema(type=openapi.TYPE_STRING)
+                            'name': openapi.Schema(type=openapi.TYPE_STRING, description="파일 이름 (확장자 제외)"),
+                            'url': openapi.Schema(type=openapi.TYPE_STRING, description="Presigned 이미지 URL"),
+                            'createdDate': openapi.Schema(type=openapi.TYPE_STRING, description="생성 날짜 및 시간 (KST, 9시간 추가)", format='date-time')
                         }
                     )
                 )
             ),
             status.HTTP_404_NOT_FOUND: openapi.Response(
-                description="이미지를 찾을 수 없음",
-                schema=openapi.Schema(
-                    type=openapi.TYPE_OBJECT,
-                    properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
-                )
+                description="이미지 또는 사용자 정보를 찾을 수 없음"
             ),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-                description="Error occurred while fetching images"
+                description="이미지 가져오는 중 오류 발생"
             )
         }
     )
     def get(self, request):
-        # 가장 최근 사용자 정보 가져오기
+        # 가장 최근 로그인 사용자 정보 가져오기
         latest_token = OutstandingToken.objects.order_by('-created_at').first()
 
         if not latest_token:
-            return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            return Response({"error": "사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-        user_id = latest_token.user_id  # 사용자 ID 가져오기
-
+        user_id = latest_token.user_id
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
@@ -254,32 +325,48 @@ class S3ImageListView(APIView):
         )
 
         try:
-            # 사용자 ID로 파일 이름 패턴 생성
-            file_name_pattern = f"images/{user_id}_contract"
-
-            # S3에서 파일 목록 가져오기
-            response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=file_name_pattern)
+            prefix = f"images/{user_id}_contract"
+            response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=prefix)
 
             image_data = []
-
-            if 'Contents' in response:  # 파일이 존재하는 경우
+            if 'Contents' in response:
                 for obj in response['Contents']:
-                    file_name, file_extension = os.path.splitext(obj['Key'])  # os.path.splitext 사용
-                    if file_extension in ('.jpg', '.jpeg', '.png', '.gif'):
+                    if obj['Key'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
                         presigned_url = s3.generate_presigned_url(
-                        'get_object',
-                        Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
-                        ExpiresIn=3600  # 1 hour expiration
-                    )
+                            'get_object',
+                            Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
+                            ExpiresIn=3600  # 1시간 동안 유효
+                        )
+                        image_name = os.path.splitext(os.path.basename(obj['Key']))[0]  # 파일 이름만 추출
 
-                    # 이미지 URL에 파일 확장자를 포함하여 반환
-                    image_url = f"{presigned_url.split('?')[0]}"
-                    image_data.append({'name': f"{file_name}", 'url': image_url})
-            else:  # 파일이 존재하지 않는 경우
+                        # 파일 이름에서 날짜 및 시간 추출
+                        try:
+                            date_time_str = image_name.split('_')[-1]  # 마지막 부분 추출
+                            date_time_obj = datetime.datetime.strptime(date_time_str, "%Y%m%d-%H%M%S")
+
+                            # KST 타임존 설정
+                            kst = pytz.timezone('Asia/Seoul')
+                            date_time_obj = kst.localize(date_time_obj)
+
+                            # 9시간 더하기
+                            date_time_obj += datetime.timedelta(hours=9)
+
+                            # createdDate 형식으로 변환
+                            created_date = date_time_obj.strftime("%Y-%m-%d %H:%M:%S")
+                        except ValueError:
+                            created_date = None  # 파싱 실패 시 None으로 설정
+
+                        image_data.append({
+                            'name': image_name,
+                            'url': presigned_url,
+                            'createdDate': created_date
+                        })
+
+            else:
                 return Response({"error": "해당 사용자의 이미지를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
-            return Response(image_data, status=status.HTTP_200_OK)  # JSON 응답으로 반환
+            return Response(image_data, status=status.HTTP_200_OK)
 
         except Exception as e:
-            error_message = {"error": f"Error fetching S3 images: {str(e)}"}
+            error_message = {"error": f"S3 이미지를 가져오는 중 오류 발생: {str(e)}"}
             return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
