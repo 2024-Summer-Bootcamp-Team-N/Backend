@@ -116,7 +116,7 @@ services:
       - app-network
 
   frontend:
-    image: legit0302/fe:1.0.10
+    image: legit0302/fe:1.0.11
     container_name: frontend
     ports:
       - "5173:5173"
