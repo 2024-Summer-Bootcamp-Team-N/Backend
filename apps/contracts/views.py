@@ -7,6 +7,7 @@ import os
 import io
 import base64
 
+from django.utils import timezone
 from rest_framework.parsers import JSONParser
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.conf import settings
@@ -178,23 +179,9 @@ class S3ImageUploadView(APIView):
 
             user_id = latest_token.user_id  # 사용자 ID 가져오기
 
-            # 파일 이름 생성 (사용자 ID + "_contract")
-            base_file_name = f"images/{user_id}_contract"
-
-            # 파일 이름 중복 검사 및 번호 추가
-            file_name = base_file_name
-            counter = 1
-            while True:
-                try:
-                    self.s3.head_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=file_name)
-                except botocore.exceptions.ClientError as e:
-                    if e.response['Error']['Code'] == '404':
-                        break  # 파일 없음, 루프 종료
-                    else:
-                        raise  # 다른 에러 발생, 예외 발생
-
-                file_name = f"{base_file_name}_{counter}"
-                counter += 1
+            # 현재 시간 기반으로 고유한 파일 이름 생성
+            timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
+            file_name = f"images/{user_id}_contract_{timestamp}"
 
             # 파일 확장자 추가
             file_extension = mimetypes.guess_extension(content_type)
