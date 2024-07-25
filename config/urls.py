@@ -7,6 +7,7 @@ from django.views.generic import TemplateView
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from chat.routing import websocket_urlpatterns
+from django.core.asgi import get_asgi_application
 
 schema_view = get_schema_view(
     openapi.Info(

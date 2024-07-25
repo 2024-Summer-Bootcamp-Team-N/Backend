@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  web:
+  backend:
     build:
       context: .
       dockerfile: Dockerfile-dev
@@ -62,35 +60,35 @@ services:
     networks:
       - app-network
 
-  nginx:
-    image: nginx:latest
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./staticfiles:/app/staticfiles
-      - /etc/letsencrypt:/etc/letsencrypt
-    ports:
-      - "80:80"
-      - "443:443"
-    depends_on:
-      - web
-      - daphne
-      - frontend
-    networks:
-      - app-network
-
-  certbot:
-    image: certbot/certbot
-    user: root
-    volumes:
-      - ./letsencrypt:/etc/letsencrypt
-      - ./letsencrypt:/var/lib/letsencrypt
-      - ./letsencrypt:/var/www/certbot
-      - ./letsencrypt/logs:/var/log/letsencrypt
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    depends_on:
-      - nginx
-    networks:
-      - app-network
+#  nginx:
+#    image: nginx:latest
+#    volumes:
+#      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+#      - ./staticfiles:/app/staticfiles
+#      - /etc/letsencrypt:/etc/letsencrypt
+#    ports:
+#      - "80:80"
+#      - "443:443"
+#    depends_on:
+#      - web
+#      - daphne
+#      - frontend
+#    networks:
+#      - app-network
+#
+#  certbot:
+#    image: certbot/certbot
+#    user: root
+#    volumes:
+#      - ./letsencrypt:/etc/letsencrypt
+#      - ./letsencrypt:/var/lib/letsencrypt
+#      - ./letsencrypt:/var/www/certbot
+#      - ./letsencrypt/logs:/var/log/letsencrypt
+#    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+#    depends_on:
+#      - nginx
+#    networks:
+#      - app-network
 
   redis:
     image: "redis:alpine"
@@ -118,7 +116,7 @@ services:
       - app-network
 
   frontend:
-    image: legit0302/fe:1.0.5
+    image: legit0302/fe:1.0.10
     container_name: frontend
     ports:
       - "5173:5173"
