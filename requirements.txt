@@ -26,3 +26,4 @@ aioredis
 boto3
 botocore
 django-storages
+django-prometheus
