@@ -2,7 +2,7 @@ FROM python:3.9-slim-bullseye
 
 WORKDIR /app
 
-# 필요한 패키지 설치
+# 패키지 설치
 RUN apt-get update && apt-get install -y \
     git \
     default-libmysqlclient-dev \
@@ -19,13 +19,17 @@ RUN groupadd -r myuser && useradd -r -g myuser myuser
 
 # requirements.txt 파일 복사 및 종속성 설치
 COPY requirements.txt ./
-RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery python-dotenv
+RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery python-dotenv gunicorn
 
-# 애플리케이션 파일 복사
+# 앱 파일 복사
 COPY . .
 
 # 권한 설정
 RUN chown -R myuser:myuser /app
 
-# Django 실행
-CMD ["python3.9", "manage.py", "runserver", "0.0.0.0:8000"]
+# 개발환경 / 배포환경으로 나누었습니다!
+ENV DJANGO_SETTINGS_MODULE=config.settings
+CMD if [ "$DJANGO_ENV" = "production" ]; then gunicorn --bind 0.0.0.0:8000 config.wsgi:application; else python manage.py runserver 0.0.0.0:8000; fi
+
+# 사용자 권한으로 실행
+USER myuser
