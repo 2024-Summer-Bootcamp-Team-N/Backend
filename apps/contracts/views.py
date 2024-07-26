@@ -228,17 +228,32 @@ class S3ImageListView(APIView):
                         type=openapi.TYPE_OBJECT,
                         properties={
                             'name': openapi.Schema(type=openapi.TYPE_STRING, description="파일 이름 (확장자 제외)"),
-                            'url': openapi.Schema(type=openapi.TYPE_STRING, description="Presigned 이미지 URL"),
+                            'url': openapi.Schema(type=openapi.TYPE_STRING, description="이미지 URL"),
                             'createdDate': openapi.Schema(type=openapi.TYPE_STRING, description="생성 날짜 및 시간 (KST, 9시간 추가)", format='date-time')
                         }
                     )
                 )
             ),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response(
+                description="유효하지 않은 리프레시 토큰",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+                )
+            ),
             status.HTTP_404_NOT_FOUND: openapi.Response(
-                description="이미지 또는 사용자 정보를 찾을 수 없음"
+                description="이미지 또는 사용자 정보를 찾을 수 없음",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+                )
             ),
             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-                description="이미지 가져오는 중 오류 발생"
+                description="이미지 가져오는 중 오류 발생",
+                schema=openapi.Schema(
+                    type=openapi.TYPE_OBJECT,
+                    properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
+                )
             )
         }
     )
@@ -270,12 +285,8 @@ class S3ImageListView(APIView):
             image_data = []
             if 'Contents' in response:
                 for obj in response['Contents']:
-                    if obj['Key'].lower().endswith(('.jpg', '.jpeg', '.png', '.gif')):
-                        presigned_url = s3.generate_presigned_url(
-                            'get_object',
-                            Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
-                            ExpiresIn=3600  # 1시간 동안 유효
-                        )
+                    if obj['Key'].lower().endswith(('.jpg', '.jpeg', '.png')):
+                        image_url = f"https://{settings.AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com/{obj['Key']}"
                         image_name = os.path.splitext(os.path.basename(obj['Key']))[0]  # 파일 이름만 추출
 
                         # 파일 이름에서 날짜 및 시간 추출
@@ -297,7 +308,7 @@ class S3ImageListView(APIView):
 
                         image_data.append({
                             'name': image_name,
-                            'url': presigned_url,
+                            'url': image_url,
                             'createdDate': created_date
                         })
 
