@@ -98,8 +98,6 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    volumes:
-      - /home/ec2-user/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
     networks:
@@ -108,9 +106,6 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    volumes:
-      - /home/ec2-user/grafana:/var/lib/grafana
-      - /home/ec2-user/grafana/grafana.ini:/etc/grafana/grafana.ini
     ports:
       - "3000:3000"
     networks:
