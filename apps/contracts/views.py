@@ -93,27 +93,27 @@ class LatestRoomDetailInfoAPIView(APIView):
                 return Response({"error": "해당 방의 가격 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
             # 가장 최근 사용자 정보 가져오기
-            latest_token = OutstandingToken.objects.order_by('-created_at').first()
+            refresh_token = request.headers.get('Authorization', '')
 
-            if not latest_token:
-                return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            # 리프레시 토큰을 사용하여 OutstandingToken 객체 가져오기
+            token = OutstandingToken.objects.get(token=refresh_token)
 
-            try:
-                latest_user = User.objects.get(id=latest_token.user_id)
-            except User.DoesNotExist:
-                return Response({"error": "해당 사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            # OutstandingToken의 user_id를 사용하여 User 객체 가져오기
+            user = User.objects.get(id=token.user_id)
 
             result = {
                 "location": latest_room_detail.location,
                 "exclusive_overall_area": latest_room_detail.exclusive_overall_area,
                 "building_use": latest_room_detail.building_use,
-                "latest_user_name": latest_user.name,
+                "latest_user_name": user.name,  # User 모델의 name 필드 사용
                 "deposit": deposit,
                 "monthly_rent": monthly_rent,
             }
             return Response(result, status=status.HTTP_200_OK)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        except OutstandingToken.DoesNotExist:
+            return Response({"error": "유효하지 않은 리프레시 토큰입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+        except User.DoesNotExist:
+            return Response({"error": "사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
 
 
 #계약서 이미지 s3에 업로드
@@ -173,13 +173,18 @@ class S3ImageUploadView(APIView):
             if content_type not in allowed_mime_types:
                 return Response({'error': '유효하지 않은 파일 형식입니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
-            # 가장 최근 사용자 정보 가져오기
-            latest_token = OutstandingToken.objects.order_by('-created_at').first()
+            refresh_token = request.headers.get('Authorization', '')
 
-            if not latest_token:
-                return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+            if not refresh_token:
+                return Response({"error": "리프레시 토큰이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-            user_id = latest_token.user_id  # 사용자 ID 가져오기
+            try:
+                # 리프레시 토큰을 사용하여 사용자 정보 가져오기 (OutstandingToken 모델 활용)
+                token = OutstandingToken.objects.get(token=refresh_token)
+                user_id = token.user_id
+
+            except OutstandingToken.DoesNotExist:
+                return Response({"error": "유효하지 않은 리프레시 토큰입니다."}, status=status.HTTP_401_UNAUTHORIZED)
 
             # 현재 시간 기반으로 고유한 파일 이름 생성
             timestamp = timezone.now().strftime("%Y%m%d-%H%M%S")
@@ -212,79 +217,6 @@ class S3ImageUploadView(APIView):
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-# class S3ImageListView(APIView):
-#     @swagger_auto_schema(
-#         responses={
-#             status.HTTP_200_OK: openapi.Response(
-#                 description="List of S3 image URLs",
-#                 schema=openapi.Schema(
-#                     type=openapi.TYPE_ARRAY,
-#                     items=openapi.Schema(
-#                         type=openapi.TYPE_OBJECT,
-#                         properties={
-#                             'name': openapi.Schema(type=openapi.TYPE_STRING),
-#                             'url': openapi.Schema(type=openapi.TYPE_STRING)
-#                         }
-#                     )
-#                 )
-#             ),
-#             status.HTTP_404_NOT_FOUND: openapi.Response(
-#                 description="이미지를 찾을 수 없음",
-#                 schema=openapi.Schema(
-#                     type=openapi.TYPE_OBJECT,
-#                     properties={'error': openapi.Schema(type=openapi.TYPE_STRING)}
-#                 )
-#             ),
-#             status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(
-#                 description="Error occurred while fetching images"
-#             )
-#         }
-#     )
-#     def get(self, request):
-#         # 가장 최근 사용자 정보 가져오기
-#         latest_token = OutstandingToken.objects.order_by('-created_at').first()
-#
-#         if not latest_token:
-#             return Response({"error": "최근 사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-#
-#         user_id = latest_token.user_id  # 사용자 ID 가져오기
-#
-#         s3 = boto3.client(
-#             's3',
-#             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-#             aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
-#         )
-#
-#         try:
-#             # 사용자 ID로 파일 이름 패턴 생성
-#             file_name_pattern = f"images/{user_id}_contract"
-#
-#             # S3에서 파일 목록 가져오기
-#             response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Prefix=file_name_pattern)
-#
-#             image_data = []
-#
-#             if 'Contents' in response:  # 파일이 존재하는 경우
-#                 for obj in response['Contents']:
-#                     file_name, file_extension = os.path.splitext(obj['Key'])  # os.path.splitext 사용
-#                     if file_extension in ('.jpg', '.jpeg', '.png', '.gif'):
-#                         presigned_url = s3.generate_presigned_url(
-#                         'get_object',
-#                         Params={'Bucket': settings.AWS_STORAGE_BUCKET_NAME, 'Key': obj['Key']},
-#                         ExpiresIn=3600  # 1 hour expiration
-#                     )
-#
-#                     # 이미지 URL에 파일 확장자를 포함하여 반환
-#                     image_url = f"{presigned_url.split('?')[0]}"
-#                     image_data.append({'name': f"{file_name}", 'url': image_url})
-#             else:  # 파일이 존재하지 않는 경우
-#                 return Response({"error": "해당 사용자의 이미지를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
-#
-#             return Response(image_data, status=status.HTTP_200_OK)  # JSON 응답으로 반환
-#
-#         except Exception as e:
-#             error_message = {"error": f"Error fetching S3 images: {str(e)}"}
-#             return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class S3ImageListView(APIView):
     @swagger_auto_schema(
         responses={
@@ -311,13 +243,20 @@ class S3ImageListView(APIView):
         }
     )
     def get(self, request):
-        # 가장 최근 로그인 사용자 정보 가져오기
-        latest_token = OutstandingToken.objects.order_by('-created_at').first()
+        # 사용자에게서 리프레시 토큰을 받음
+        refresh_token = request.headers.get('Authorization', '')
 
-        if not latest_token:
-            return Response({"error": "사용자 정보를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        if not refresh_token:
+            return Response({"error": "리프레시 토큰이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
 
-        user_id = latest_token.user_id
+        try:
+            # 리프레시 토큰을 사용하여 사용자 정보 가져오기 (OutstandingToken 모델 활용)
+            token = OutstandingToken.objects.get(token=refresh_token)
+            user_id = token.user_id
+
+        except OutstandingToken.DoesNotExist:
+            return Response({"error": "유효하지 않은 리프레시 토큰입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
         s3 = boto3.client(
             's3',
             aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
