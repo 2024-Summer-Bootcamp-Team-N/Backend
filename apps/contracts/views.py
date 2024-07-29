@@ -23,6 +23,8 @@ from ..options.models import RoomInfo, RoomDetailInfo
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
 from io import BytesIO
+from .models import LatestRoomInfo
+from .serializers import LatestRoomInfoSerializer
 
 User = get_user_model()
 
@@ -48,16 +50,17 @@ class LatestRoomDetailInfoAPIView(APIView):
     @swagger_auto_schema(
         responses={
             status.HTTP_200_OK: openapi.Response(
-                description="최근 방 정보 및 최근 사용자 정보",
+                description="성공적으로 방 정보와 사용자 이름을 가져왔습니다.",
                 schema=openapi.Schema(
                     type=openapi.TYPE_OBJECT,
                     properties={
-                        "location": openapi.Schema(type=openapi.TYPE_STRING, description="방 위치"),
-                        "exclusive_overall_area": openapi.Schema(type=openapi.TYPE_STRING, description="전용면적"),
-                        "building_use": openapi.Schema(type=openapi.TYPE_STRING, description="건물 용도"),
-                        "latest_user_name": openapi.Schema(type=openapi.TYPE_STRING, description="최근 사용자 이름"),
-                        "deposit": openapi.Schema(type=openapi.TYPE_STRING, description="보증금"),
-                        "monthly_rent": openapi.Schema(type=openapi.TYPE_STRING, description="월세"),
+                        'location': openapi.Schema(type=openapi.TYPE_STRING),
+                        'exclusive_overall_area': openapi.Schema(type=openapi.TYPE_NUMBER),
+                        'building_use': openapi.Schema(type=openapi.TYPE_STRING),
+                        'latest_user_id': openapi.Schema(type=openapi.TYPE_INTEGER),
+                        'latest_user_name': openapi.Schema(type=openapi.TYPE_STRING),
+                        'deposit': openapi.Schema(type=openapi.TYPE_STRING),
+                        'monthly_rent': openapi.Schema(type=openapi.TYPE_STRING)
                     }
                 )
             ),
@@ -101,19 +104,36 @@ class LatestRoomDetailInfoAPIView(APIView):
             # OutstandingToken의 user_id를 사용하여 User 객체 가져오기
             user = User.objects.get(id=token.user_id)
 
-            result = {
-                "location": latest_room_detail.location,
-                "exclusive_overall_area": latest_room_detail.exclusive_overall_area,
-                "building_use": latest_room_detail.building_use,
-                "latest_user_name": user.name,  # User 모델의 name 필드 사용
-                "deposit": deposit,
-                "monthly_rent": monthly_rent,
+            # 결과를 LatestRoomInfo 모델에 저장
+            latest_room_info = LatestRoomInfo.objects.create(
+                location=latest_room_detail.location,
+                exclusive_overall_area=latest_room_detail.exclusive_overall_area,
+                building_use=latest_room_detail.building_use,
+                latest_user_id=user.id,
+                deposit=deposit,
+                monthly_rent=monthly_rent or '',
+            )
+
+            # 응답 데이터에 사용자 이름 추가
+            response_data = {
+                'location': latest_room_info.location,
+                'exclusive_overall_area': latest_room_info.exclusive_overall_area,
+                'building_use': latest_room_info.building_use,
+                'latest_user_id': latest_room_info.latest_user_id,
+                'latest_user_name': user.name,  # 또는 user.username, user.first_name 등
+                'deposit': latest_room_info.deposit,
+                'monthly_rent': latest_room_info.monthly_rent
             }
-            return Response(result, status=status.HTTP_200_OK)
+
+            return Response(response_data, status=status.HTTP_200_OK)
+
         except OutstandingToken.DoesNotExist:
             return Response({"error": "유효하지 않은 리프레시 토큰입니다."}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
             return Response({"error": "사용자를 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 
 #계약서 이미지 s3에 업로드
@@ -319,4 +339,67 @@ class S3ImageListView(APIView):
 
         except Exception as e:
             error_message = {"error": f"S3 이미지를 가져오는 중 오류 발생: {str(e)}"}
+            return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class S3ImageDeleteView(APIView):
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'name': openapi.Schema(type=openapi.TYPE_STRING, description="삭제할 S3 객체의 name 값")
+            }
+        ),
+        responses={
+            status.HTTP_204_NO_CONTENT: openapi.Response(description="이미지 삭제 성공"),
+            status.HTTP_400_BAD_REQUEST: openapi.Response(description="name 값 누락",
+                                                          schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                                              'error': openapi.Schema(type=openapi.TYPE_STRING)})),
+            status.HTTP_401_UNAUTHORIZED: openapi.Response(description="유효하지 않은 리프레시 토큰",
+                                                           schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                                               'error': openapi.Schema(type=openapi.TYPE_STRING)})),
+            status.HTTP_404_NOT_FOUND: openapi.Response(description="S3 객체 또는 사용자 정보를 찾을 수 없음",
+                                                        schema=openapi.Schema(type=openapi.TYPE_OBJECT, properties={
+                                                            'error': openapi.Schema(type=openapi.TYPE_STRING)})),
+            status.HTTP_500_INTERNAL_SERVER_ERROR: openapi.Response(description="이미지 삭제 중 오류 발생",
+                                                                    schema=openapi.Schema(type=openapi.TYPE_OBJECT,
+                                                                                          properties={
+                                                                                              'error': openapi.Schema(
+                                                                                                  type=openapi.TYPE_STRING)}))
+        }
+    )
+    def delete(self, request):
+        refresh_token = request.headers.get('Authorization', '')
+        name = request.data.get('name')  # 'filename' 대신 'name' 사용
+
+        if not refresh_token or not name:
+            return Response({"error": "리프레시 토큰 또는 name이 없습니다."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            token = OutstandingToken.objects.get(token=refresh_token)
+            user_id = token.user_id
+        except OutstandingToken.DoesNotExist:
+            return Response({"error": "유효하지 않은 리프레시 토큰입니다."}, status=status.HTTP_401_UNAUTHORIZED)
+
+        s3 = boto3.client(
+            's3',
+            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY
+        )
+
+        try:
+            # name으로 파일 찾기
+            response = s3.list_objects_v2(Bucket=settings.AWS_STORAGE_BUCKET_NAME)
+
+            for obj in response.get('Contents', []):
+                if obj['Key'].split('/')[-1].startswith(name):  # name으로 시작하는 파일 찾기
+                    key = obj['Key']
+                    s3.delete_object(Bucket=settings.AWS_STORAGE_BUCKET_NAME, Key=key)
+                    return Response(status=status.HTTP_204_NO_CONTENT)
+
+            # 파일을 찾지 못한 경우
+            return Response({"error": "S3에서 해당 name의 파일을 찾을 수 없습니다."}, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            error_message = {"error": f"S3 이미지 삭제 중 오류 발생: {str(e)}"}
             return Response(error_message, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
