@@ -122,20 +122,20 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 ASGI_APPLICATION = 'config.asgi.application'
 
-# CHANNEL_LAYERS = {
-#     "default": {
-#         "BACKEND": "channels_redis.core.RedisChannelLayer",  # 변경
-#         "CONFIG": {
-#             "hosts": [('redis://redis:6379')],  # 변경
-#         },
-#     },
-# }
-
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels.layers.InMemoryChannelLayer",
+        "BACKEND": "channels_redis.core.RedisChannelLayer",  # 변경
+        "CONFIG": {
+            "hosts": [('redis://redis:6379')],  # 변경
+        },
     },
 }
+
+# CHANNEL_LAYERS = {
+#     "default": {
+#         "BACKEND": "channels.layers.InMemoryChannelLayer",
+#     },
+# }
 
 DATABASES = {
     'default': {

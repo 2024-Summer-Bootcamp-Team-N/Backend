@@ -3,9 +3,11 @@ from channels.generic.websocket import AsyncWebsocketConsumer
 from .chatgpt import get_chatgpt_response
 from asgiref.sync import sync_to_async
 import asyncio
+import uuid
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
+        self.session_id = str(uuid.uuid4())  # 고유한 세션 ID 생성
         await self.accept()
 
     async def disconnect(self, close_code):
@@ -17,7 +19,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         try:
             # 타임아웃 설정 (60초)
-            response = await asyncio.wait_for(get_chatgpt_response(message), timeout=60.0)
+            response = await asyncio.wait_for(get_chatgpt_response(message, self.session_id), timeout=60.0)
         except asyncio.TimeoutError:
             response = "죄송합니다. 응답 시간이 초과되었습니다."
         except Exception as e:
