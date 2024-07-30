@@ -9,17 +9,25 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.session_id = str(uuid.uuid4())  # 고유한 세션 ID 생성
         await self.accept()
+        print(f"WebSocket connected: {self.session_id}")
 
     async def disconnect(self, close_code):
-        pass
+        print(f"WebSocket disconnected: {close_code}")
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
-        message = text_data_json['message']
+        message_type = text_data_json.get('type', '')
+        message_content = text_data_json.get('message', '')
+
+        print(f"Received message: {message_content}")
+
+        if message_type == 'ping':
+            await self.send(text_data=json.dumps({'type': 'pong'}))
+            return
 
         try:
             # 타임아웃 설정 (60초)
-            response = await asyncio.wait_for(get_chatgpt_response(message, self.session_id), timeout=60.0)
+            response = await asyncio.wait_for(get_chatgpt_response(message_content, self.session_id), timeout=60.0)
         except asyncio.TimeoutError:
             response = "죄송합니다. 응답 시간이 초과되었습니다."
         except Exception as e:
@@ -28,6 +36,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.send(text_data=json.dumps({
             'message': response
         }))
+        print(f"Sent response: {response}")
 
     @sync_to_async
     def get_db_info(self):
