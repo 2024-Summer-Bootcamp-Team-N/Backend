@@ -15,7 +15,7 @@ services:
       - PYTHONPATH=/app
     depends_on:
       - rabbitmq
-#      - redis
+      - redis
     restart: always
     networks:
       - app-network
@@ -36,7 +36,7 @@ services:
       - PYTHONPATH=/app
     depends_on:
       - rabbitmq
-#      - redis
+      - redis
     restart: always
     networks:
       - app-network
@@ -90,7 +90,7 @@ services:
       - app-network
 
   frontend:
-    image: legit0302/fe:1.0.11
+    image: legit0302/fe:1.0.15
     container_name: frontend
     ports:
       - "5173:5173"
