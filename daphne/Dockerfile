@@ -19,13 +19,17 @@ RUN groupadd -r myuser && useradd -r -g myuser myuser
 
 # requirements.txt 파일 복사 및 종속성 설치
 COPY requirements.txt ./requirements.txt
-RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery python-dotenv
+RUN pip install --upgrade pip && pip install -r requirements.txt && pip install celery python-dotenv gunicorn uvicorn
 
 # 애플리케이션 파일 복사
-COPY .. .
+COPY . .
 
 # 권한 설정
 RUN chown -R myuser:myuser /app
 
-# Daphne 실행
-CMD ["daphne", "-b", "0.0.0.0", "-p", "8001", "config.asgi:application"]
+# 개발환경 / 배포환경으로 나눔
+ENV DJANGO_SETTINGS_MODULE=config.settings
+CMD if [ "$DJANGO_ENV" = "production" ]; then gunicorn -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8001 config.asgi:application; else python manage.py runserver 0.0.0.0:8001; fi
+
+# 사용자 권한으로 실행
+USER myuser
