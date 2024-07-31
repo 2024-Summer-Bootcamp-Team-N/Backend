@@ -90,7 +90,7 @@ services:
       - app-network
 
   frontend:
-    image: legit0302/fe:1.0.15
+    image: legit0302/fe:1.0.18
     container_name: frontend
     ports:
       - "5173:5173"
