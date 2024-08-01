@@ -34,7 +34,6 @@ services:
       - PYTHONUNBUFFERED=1
       - PATH=/usr/local/bin:$PATH
       - PYTHONPATH=/app
-      - DJANGO_ENV=development
     depends_on:
       - rabbitmq
       - redis
@@ -91,7 +90,7 @@ services:
       - app-network
 
   frontend:
-    image: legit0302/fe:1.0.26
+    image: legit0302/fe:1.0.29
     container_name: frontend
     ports:
       - "5173:5173"
