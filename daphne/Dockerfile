@@ -34,7 +34,7 @@ RUN chown -R myuser:myuser /app
 
 # 개발환경 / 배포환경으로 나눔
 ENV DJANGO_SETTINGS_MODULE=config.settings
-CMD if [ "$DJANGO_ENV" = "production2" ]; then daphne -b 0.0.0.0 -p 8001 config.asgi:application; else python manage.py runserver 0.0.0.0:8001; fi
+CMD if [ "$DJANGO_ENV" = "production" ]; then daphne -b 0.0.0.0 -p 8001 config.asgi:application; else python manage.py runserver 0.0.0.0:8001; fi
 
 # 사용자 권한으로 실행
 USER myuser
