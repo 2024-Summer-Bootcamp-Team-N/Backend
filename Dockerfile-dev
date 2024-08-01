@@ -11,7 +11,11 @@ RUN apt-get update && apt-get install -y \
     chromium \
     chromium-driver \
     redis-tools && \
-    curl && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# curl 패키지 별도로 설치
+RUN apt-get update && apt-get install -y curl && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
